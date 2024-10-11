@@ -4,3 +4,5 @@
 # Debug files
 tmp*
 
+# Software repository
+software/build
