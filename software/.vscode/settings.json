@@ -1,7 +1,17 @@
 {
-  "C_Cpp.intelliSenseEngine": "default",
-  "idf.adapterTargetName": "esp32c3",
-  "idf.openOcdConfigs": [
-    "board/esp32c3-builtin.cfg"
-  ]
+    "C_Cpp.intelliSenseEngine": "default",
+    "idf.adapterTargetName": "esp32c3",
+    "idf.customExtraPaths": "/home/ben/esp/esp-idf/tools/xtensa-esp-elf-gdb/14.2_20240403/xtensa-esp-elf-gdb/bin:/home/ben/esp/esp-idf/tools/riscv32-esp-elf-gdb/14.2_20240403/riscv32-esp-elf-gdb/bin:/home/ben/esp/esp-idf/tools/xtensa-esp-elf/esp-13.2.0_20240530/xtensa-esp-elf/bin:/home/ben/esp/esp-idf/tools/riscv32-esp-elf/esp-13.2.0_20240530/riscv32-esp-elf/bin:/home/ben/esp/esp-idf/tools/esp32ulp-elf/2.38_20240113/esp32ulp-elf/bin:/home/ben/esp/esp-idf/tools/openocd-esp32/v0.12.0-esp32-20240821/openocd-esp32/bin:/home/ben/esp/esp-idf/tools/esp-rom-elfs/20240305",
+    "idf.customExtraVars": {
+        "OPENOCD_SCRIPTS": "/home/ben/esp/esp-idf/tools/openocd-esp32/v0.12.0-esp32-20240821/openocd-esp32/share/openocd/scripts",
+        "ESP_ROM_ELF_DIR": "/home/ben/esp/esp-idf/tools/esp-rom-elfs/20240305/"
+    },
+    "idf.espIdfPath": "/home/ben/esp/v5.3/esp-idf",
+    "idf.openOcdConfigs": [
+        "board/esp32c3-builtin.cfg"
+    ],
+    "idf.port": "/dev/ttyACM0",
+    "idf.pythonBinPath": "/home/ben/esp/esp-idf/python_env/idf5.3_py3.12_env/bin/python",
+    "idf.toolsPath": "/home/ben/esp/esp-idf",
+    "idf.flashType": "UART"
 }
