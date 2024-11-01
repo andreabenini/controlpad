@@ -1,4 +1,6 @@
-set(SOURCES     "main.c" "keyboard.c")
+#set(SOURCES     "main.c" "keyboard.c")
+set(SOURCES     "main.c")
+
 set(REQUIRES    "")
 
 idf_component_register(
