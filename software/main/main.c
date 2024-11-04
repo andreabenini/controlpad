@@ -85,46 +85,43 @@ void app_main(void) {
     ESP_ERROR_CHECK(adc_continuous_register_event_callbacks(handle, &cbs, NULL));
     ESP_ERROR_CHECK(adc_continuous_start(handle));
     uint16_t X = 0, Y = 0;
+    /**
+     * This is to show you the way to use the ADC continuous mode driver event callback.
+     * This `ulTaskNotifyTake` will block when the data processing in the task is fast.
+     * However in this example, the data processing (print) is slow, so you barely block here.
+     *
+     * Without using this event callback (to notify this task), you can still just call
+     * `adc_continuous_read()` here in a loop, with/without a certain block timeout.
+     */
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
     while (1) {
-        /**
-         * This is to show you the way to use the ADC continuous mode driver event callback.
-         * This `ulTaskNotifyTake` will block when the data processing in the task is fast.
-         * However in this example, the data processing (print) is slow, so you barely block here.
-         *
-         * Without using this event callback (to notify this task), you can still just call
-         * `adc_continuous_read()` here in a loop, with/without a certain block timeout.
-         */
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        ESP_LOGI(TAG, "%d", (int) EXAMPLE_ADC_UNIT_STR(EXAMPLE_ADC_UNIT));
-        while (1) {
-            ret = adc_continuous_read(handle, result, EXAMPLE_READ_LEN, &ret_num, 0);
-            if (ret == ESP_OK) {
-                // ESP_LOGI("TASK", "ret is %x, ret_num is %"PRIu32" bytes", ret, ret_num);
-                for (int i = 0; i < ret_num; i += SOC_ADC_DIGI_RESULT_BYTES) {
-                    adc_digi_output_data_t *p = (adc_digi_output_data_t*)&result[i];
-                    uint32_t chan_num = EXAMPLE_ADC_GET_CHANNEL(p);
-                    uint32_t data = EXAMPLE_ADC_GET_DATA(p);
-                    /* Check the channel number validation, the data is invalid if the channel num exceed the maximum channel */
-                    switch (chan_num) {
-                        case 2:
-                            X = data;
-                            break;
-                        case 3:
-                            Y = data;
-                            break;
-                    }
-                    ESP_LOGI(TAG, "X: %d, Y: %d", X, Y);
+        ret = adc_continuous_read(handle, result, EXAMPLE_READ_LEN, &ret_num, 0);
+        if (ret == ESP_OK) {
+            // ESP_LOGI("TASK", "ret is %x, ret_num is %"PRIu32" bytes", ret, ret_num);
+            for (int i = 0; i < ret_num; i += SOC_ADC_DIGI_RESULT_BYTES) {
+                adc_digi_output_data_t *p = (adc_digi_output_data_t*)&result[i];
+                uint32_t chan_num = EXAMPLE_ADC_GET_CHANNEL(p);
+                uint32_t data = EXAMPLE_ADC_GET_DATA(p);
+                /* Check the channel number validation, the data is invalid if the channel num exceed the maximum channel */
+                switch (chan_num) {
+                    case 2:
+                        X = data;
+                        break;
+                    case 3:
+                        Y = data;
+                        break;
                 }
-                /**
-                 * Because printing is slow, so every time you call `ulTaskNotifyTake`, it will immediately return.
-                 * To avoid a task watchdog timeout, add a delay here. When you replace the way you process the data,
-                 * usually you don't need this delay (as this task will block for a while).
-                 */
-                vTaskDelay(1);
-            } else if (ret == ESP_ERR_TIMEOUT) {
-                //We try to read `EXAMPLE_READ_LEN` until API returns timeout, which means there's no available data
-                break;
             }
+            ESP_LOGI(TAG, "X: %d, Y: %d", X, Y);
+            /**
+             * Because printing is slow, so every time you call `ulTaskNotifyTake`, it will immediately return.
+             * To avoid a task watchdog timeout, add a delay here. When you replace the way you process the data,
+             * usually you don't need this delay (as this task will block for a while).
+             */
+            vTaskDelay(1);
+        } else if (ret == ESP_ERR_TIMEOUT) {
+            //We try to read `EXAMPLE_READ_LEN` until API returns timeout, which means there's no available data
+            break;
         }
     }
     ESP_ERROR_CHECK(adc_continuous_stop(handle));
