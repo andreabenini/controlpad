@@ -7,7 +7,7 @@
 
 
 // Define GPIO for the buttons
-#define BUTTON_START    GPIO_NUM_10
+#define BUTTON_START            GPIO_NUM_10         // GPIO 10  (last gpio left, everything else on external bus)
 // Define Analog Joysticks
 #define DEFAULT_VREF            1100
 #define JOYSTICK1_X             ADC_CHANNEL_0       // GPIO0
