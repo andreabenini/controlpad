@@ -31,11 +31,26 @@
 
 
 typedef struct {
-    uint8_t     buttonStart;
-    uint16_t    joystick1_X;
-    uint16_t    joystick1_Y;
-    uint16_t    joystick2_X;
-    uint16_t    joystick2_Y;
+    bool        buttonStart,                        // Middle START button
+                buttonMenu,                         // Menu button below the StartButton
+                buttonSelect,                       // Top left
+                buttonOptions,                      // Top right
+                buttonDPadLeft,                     // Left DPAD (up, down, left right)
+                buttonDPadRight,
+                buttonDPadTop,
+                buttonDPadDown,
+                buttonA,                            // A,B,X,Y  Using classic PS layout
+                buttonB,
+                buttonX,
+                buttonY,
+                buttonLT,                           // Left Top      [digital]
+                buttonRT;                           // Right Top     [digital]
+    uint16_t    buttonLB,                           // Left Bottom   [analog ]
+                buttonRB,                           // Right Bottom  [analog ]
+                joystick1_X,                        // Left joystick
+                joystick1_Y,
+                joystick2_X,                        // Right joystick
+                joystick2_Y;
 } keyboardStatus;
 
 
