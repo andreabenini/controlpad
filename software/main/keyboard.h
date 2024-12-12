@@ -5,6 +5,8 @@
 #include <driver/gpio.h>
 #include "esp_adc/adc_continuous.h"
 
+#include <string.h>             // TODO: Remove once done
+
 
 // Define GPIO for the buttons
 #define BUTTON_START            GPIO_NUM_10         // GPIO 10  (last gpio left, everything else on external bus)
@@ -16,7 +18,7 @@
 #define JOYSTICK2_Y             ADC_CHANNEL_3       // GPIO3
 #define ADC_ATTEN               ADC_ATTEN_DB_12     // Set attenuation to 11dB (0<->3.3V)  [ADC_ATTEN_DB_11 is now deprecated]
 #define ADC_WIDTH               ADC_WIDTH_BIT_12    // Set width to 12-bit for values between 0 and 4095
-#define ADC_BUFFER_SIZE         1024                // TODO:Resize   Buffer size for continous ADC readings
+#define ADC_BUFFER_SIZE         60                  // TODO:Resize   Buffer size for continous ADC readings (60 works for 1)
 #define ADC_CONV_MODE           ADC_CONV_SINGLE_UNIT_1
 
 #if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2
@@ -55,7 +57,7 @@ typedef struct {
 
 
 void keyboardInit();
-void joystickInit(adc_channel_t (*channel)[2], adc_continuous_handle_t *adcHandle);
+void joystickInit(adc_channel_t (*channel)[4], adc_continuous_handle_t *adcHandle);
 
 void taskKeyboard(void *pvParameter);
 
