@@ -42,14 +42,11 @@ void adcInitContinuous(adc_channel_t *channel, uint8_t channelNumber, adc_contin
     };
     adc_digi_pattern_config_t adc_pattern[SOC_ADC_PATT_LEN_MAX] = {0};
     dig_cfg.pattern_num = channelNumber;
-    for (int i = 0; i < channelNumber; i++) {
+    for (int i=0; i<channelNumber; i++) {
         adc_pattern[i].atten = ADC_ATTEN;
         adc_pattern[i].channel = channel[i] & 0x7;
         adc_pattern[i].unit = ADC_UNIT_1;
         adc_pattern[i].bit_width = SOC_ADC_DIGI_MAX_BITWIDTH;
-        ESP_LOGI(TAG_KEYBOARD, "adc_pattern[%d].atten is :%"PRIx8, i, adc_pattern[i].atten);
-        ESP_LOGI(TAG_KEYBOARD, "adc_pattern[%d].channel is :%"PRIx8, i, adc_pattern[i].channel);
-        ESP_LOGI(TAG_KEYBOARD, "adc_pattern[%d].unit is :%"PRIx8, i, adc_pattern[i].unit);
     }
     dig_cfg.adc_pattern = adc_pattern;
     ESP_ERROR_CHECK(adc_continuous_config(handle, &dig_cfg));
@@ -58,14 +55,11 @@ void adcInitContinuous(adc_channel_t *channel, uint8_t channelNumber, adc_contin
 
 // Configure the ADC continuous mode parameters
 void joystickInit(adc_channel_t (*channel)[4], adc_continuous_handle_t *adcHandle) {
-    gpio_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);
-    gpio_set_direction(GPIO_NUM_1, GPIO_MODE_INPUT);
-    gpio_set_direction(GPIO_NUM_2, GPIO_MODE_INPUT);
-    gpio_set_direction(GPIO_NUM_3, GPIO_MODE_INPUT);
+    gpio_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);        // J2 Y
+    gpio_set_direction(GPIO_NUM_1, GPIO_MODE_INPUT);        // J2 X
+    gpio_set_direction(GPIO_NUM_2, GPIO_MODE_INPUT);        // J1 Y
+    gpio_set_direction(GPIO_NUM_3, GPIO_MODE_INPUT);        // J1 X
     taskHandle = xTaskGetCurrentTaskHandle();
-    
-    ESP_LOGI(TAG_KEYBOARD, "%d", sizeof(*channel)/sizeof(adc_channel_t));
-
     adcInitContinuous(*channel, sizeof(*channel)/sizeof(adc_channel_t), adcHandle);
     adc_continuous_evt_cbs_t cbs = {
         .on_conv_done = s_conv_done_cb,
@@ -81,40 +75,27 @@ void joystickInit(adc_channel_t (*channel)[4], adc_continuous_handle_t *adcHandl
      * `adc_continuous_read()` here in a loop, with/without a certain block timeout.
      */
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-    vTaskDelay(10 / portTICK_PERIOD_MS);                // 10ms initial delay
+    vTaskDelay(10 / portTICK_PERIOD_MS);                    // 10ms initial delay
 } /**/
 
 // keyboard task function
 void taskKeyboard(void *pvParameter) {
-    // adc_channel_t channel[2] = {JOYSTICK1_X, JOYSTICK1_Y};   // FIXME: This one was good
-    // adc_channel_t channel[2] = {JOYSTICK2_X, JOYSTICK2_Y};   // FIXME: This one was good
-    adc_channel_t channel[4] = {JOYSTICK1_X, JOYSTICK1_Y, JOYSTICK2_X, JOYSTICK2_Y}; // TODO: Try to have them both connected
+    adc_channel_t channel[4] = {JOYSTICK1_X, JOYSTICK1_Y, JOYSTICK2_X, JOYSTICK2_Y};
     adc_continuous_handle_t adcHandle = NULL;
     
     ESP_LOGI(TAG_KEYBOARD, "Keyboard Init");
     keyboardInit();
     joystickInit(&channel, &adcHandle);
-    esp_err_t adcResult;                        // Continuous read result
-    uint32_t  adcResultNum;                     // Continuous read returned bytes
-    uint8_t   adcData[ADC_BUFFER_SIZE] = {0};   // Continuous read adc data stream
-    adc_digi_output_data_t *p;                  // data stream pointer
+    esp_err_t adcResult;                                    // Continuous read result
+    uint32_t  adcResultNum;                                 // Continuous read returned bytes
+    uint8_t   adcData[ADC_BUFFER_SIZE] = {0};               // Continuous read adc data stream
+    adc_digi_output_data_t *p;                              // data stream pointer
     keyboardStatus keyboard;
     while (1) {
         keyboard.buttonStart = !gpio_get_level(BUTTON_START);    // Read the button state (0: pressed, 1: released)
         // Reading analog values from all joystick axes
         keyboard.joystick1_X = keyboard.joystick1_Y = keyboard.joystick2_X = keyboard.joystick2_Y = 0;
         adcResult = adc_continuous_read(adcHandle, adcData, ADC_BUFFER_SIZE, &adcResultNum, 0);
-
-        // char buff[1024] = {0};
-        // strcpy(buff, "");
-        // for (int i=0; i<sizeof(adcData); i++) {
-        //     if (adcData[i] != 0) {
-        //         sprintf(buff+strlen(buff), " %hhu", adcData[i]);
-        //     }
-        // }
-        // ESP_LOGI(TAG_KEYBOARD, "buff=%s", buff);
-
-
         if (adcResult == ESP_OK) {
             for (int i=0; i<adcResultNum; i+=SOC_ADC_DIGI_RESULT_BYTES) {
                 p = (adc_digi_output_data_t*)&adcData[i];
@@ -127,12 +108,12 @@ void taskKeyboard(void *pvParameter) {
                     case 1:
                         keyboard.joystick1_Y = ADC_GET_DATA(p);
                         break;
-                    // case 2:
-                    //     keyboard.joystick2_X = ADC_GET_DATA(p);
-                    //     break;
-                    // case 3:
-                    //     keyboard.joystick2_Y = ADC_GET_DATA(p);
-                    //     break;
+                    case 2:
+                        keyboard.joystick2_X = ADC_GET_DATA(p);
+                        break;
+                    case 3:
+                        keyboard.joystick2_Y = ADC_GET_DATA(p);
+                        break;
                 }
             }
         } else if (adcResult == ESP_ERR_TIMEOUT) {
