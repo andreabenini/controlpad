@@ -3,9 +3,8 @@
 
 #include <stdint.h>
 #include <driver/gpio.h>
+#include "driver/i2c_master.h"
 #include "esp_adc/adc_continuous.h"
-
-#include <string.h>             // TODO: Remove once done
 
 
 // Define GPIO for the buttons
@@ -18,8 +17,27 @@
 #define JOYSTICK2_Y             ADC_CHANNEL_3       // GPIO3
 #define ADC_ATTEN               ADC_ATTEN_DB_12     // Set attenuation to 11dB (0<->3.3V)  [ADC_ATTEN_DB_11 is now deprecated]
 #define ADC_WIDTH               ADC_WIDTH_BIT_12    // Set width to 12-bit for values between 0 and 4095
-#define ADC_BUFFER_SIZE         60                  // TODO:Resize   Buffer size for continous ADC readings (60 works for 1)
+#define ADC_BUFFER_SIZE         60                  // Buffer size for continous ADC readings (60 works)
 #define ADC_CONV_MODE           ADC_CONV_SINGLE_UNIT_1
+
+// I2C Bus setup
+#define I2C_MASTER              I2C_NUM_0           // I2C port number for master dev
+#define I2C_SDA                 8                   // gpio number for I2C master data
+#define I2C_SCL                 9                   // gpio number for I2C master clock
+#define I2C_FREQ_HZ             100000              // I2C master clock frequency
+#define I2C_TIMEOUT_MS          1000
+#define I2C_TX_BUF_DISABLE      0                   // I2C master doesn't need buffer
+#define I2C_RX_BUF_DISABLE      0                   // I2C master doesn't need buffer
+#define MCP23017_ADDR           0x20                // MCP23017 I2C address
+#define MCP23017_IODIRA         0x00                // MCP23017 IODIRA register address
+#define MCP23017_IODIRB         0x01                // MCP23017 IODIRB register address
+#define MCP23017_GPIOA          0x12                // MCP23017 GPIOA register address
+#define MCP23017_GPIOB          0x13                // MCP23017 GPIOB register address
+
+#define WRITE_BIT  0x00  // LSB 0 for write operation
+// #define READ_BIT   0x01  // LSB 1 for read operation
+#define ACK_CHECK_EN 0x1
+
 
 #if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2
 #define ADC_OUTPUT_TYPE             ADC_DIGI_OUTPUT_FORMAT_TYPE1
