@@ -79,7 +79,8 @@ void joystickInit(adc_channel_t (*channel)[4], adc_continuous_handle_t *adcHandl
 } /**/
 
 // keyboard task function
-void taskKeyboard(void *pvParameter) {
+// FIXME: Merge this code into taskKeyboard() once done with I2C
+void taskKeyboard1(void *pvParameter) {
     adc_channel_t channel[4] = {JOYSTICK1_X, JOYSTICK1_Y, JOYSTICK2_X, JOYSTICK2_Y};
     adc_continuous_handle_t adcHandle = NULL;
     
@@ -138,4 +139,87 @@ void taskKeyboard(void *pvParameter) {
     }
     ESP_ERROR_CHECK(adc_continuous_stop(adcHandle));
     ESP_ERROR_CHECK(adc_continuous_deinit(adcHandle));
+} /**/
+
+
+/**
+ * I2C bus master initialization
+ */
+esp_err_t i2c_MasterInit() {
+    int i2c_master_port = I2C_MASTER;
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = I2C_SDA,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = I2C_SCL,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = I2C_FREQ_HZ,
+        // .clk_flags          = 0,          // Optional, you can use I2C_SCLK_SRC_FLAG_* flags to choose i2c source clock here
+    };
+    esp_err_t err = i2c_param_config(i2c_master_port, &conf);
+    if (err != ESP_OK) {
+        ESP_LOGI(TAG_KEYBOARD, "I2C init failed");
+        return err;
+    }
+    ESP_LOGI(TAG_KEYBOARD, "I2C initialized successfully");
+    return i2c_driver_install(i2c_master_port, conf.mode, I2C_RX_BUF_DISABLE, I2C_TX_BUF_DISABLE, 0);
+} /**/
+
+
+// /**
+//  * @brief Write a sequence of bytes to a MCP23017 register
+//  */
+// esp_err_t mcp23017_RegisterWrite(uint8_t reg_addr, uint8_t *data, size_t len) {
+//     int ret;
+//     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+//     i2c_master_start(cmd);
+//     i2c_master_write_byte(cmd, MCP23017_ADDR << 1 | WRITE_BIT, ACK_CHECK_EN);
+//     i2c_master_write_byte(cmd, reg_addr, ACK_CHECK_EN);
+//     i2c_master_write(cmd, data, len, ACK_CHECK_EN);
+//     i2c_master_stop(cmd);
+//     ret = i2c_master_cmd_begin(I2C_MASTER, cmd, I2C_TIMEOUT_MS / portTICK_PERIOD_MS);
+//     i2c_cmd_link_delete(cmd);
+//     return ret;
+// } /**/
+
+
+// void mcp23017_Setup() {
+//     // Configure GPIOA and GPIOB as inputs
+//     uint8_t data = 0xFF; // Set all pins as inputs
+//     ESP_ERROR_CHECK(mcp23017_RegisterWrite(MCP23017_IODIRA, &data, 1));
+//     ESP_ERROR_CHECK(mcp23017_RegisterWrite(MCP23017_IODIRB, &data, 1));
+//     ESP_LOGI(TAG_KEYBOARD, "MCP23017 configured as inputs");
+// } /**/
+
+
+
+
+void taskKeyboard(void *pvParameter) {
+    ESP_LOGI(TAG_KEYBOARD, "Task created");
+    ESP_ERROR_CHECK(i2c_MasterInit());
+
+
+    // // Configure GPIOA and GPIOB as inputs
+    // uint8_t data = 0xFF; // Set all pins as inputs
+    // ESP_ERROR_CHECK(mcp23017_register_write(MCP23017_IODIRA, &data, 1));
+    // ESP_ERROR_CHECK(mcp23017_register_write(MCP23017_IODIRB, &data, 1));
+    // ESP_LOGI(TAG, "MCP23017 configured as inputs");
+
+    // while (1) {
+    //     // Read GPIOA and GPIOB
+    //     uint8_t gpioa_data;
+    //     uint8_t gpiob_data;
+    //     ESP_ERROR_CHECK(mcp23017_register_read(MCP23017_GPIOA, &gpioa_data, 1));
+    //     ESP_ERROR_CHECK(mcp23017_register_read(MCP23017_GPIOB, &gpiob_data, 1));
+
+    //     // Print the values
+    //     ESP_LOGI(TAG, "GPIOA: 0x%02x", gpioa_data);
+    //     ESP_LOGI(TAG, "GPIOB: 0x%02x", gpiob_data);
+
+    //     vTaskDelay(1000 / portTICK_PERIOD_MS);
+    // }
+
+
+    ESP_LOGI(TAG_KEYBOARD, "Task closed");
+    vTaskDelete(NULL);                                      // Delete the task, without this I'm getting a guru meditation error with core0 in panic mode
 } /**/
