@@ -26,8 +26,8 @@
 #define I2C_SCL                 9                   // gpio number for I2C master clock
 #define I2C_FREQ_HZ             100000              // I2C master clock frequency
 #define I2C_TIMEOUT_MS          1000
-#define I2C_TX_BUF_DISABLE      0                   // I2C master doesn't need buffer
-#define I2C_RX_BUF_DISABLE      0                   // I2C master doesn't need buffer
+// #define I2C_TX_BUF_DISABLE      0                   // I2C master doesn't need buffer
+// #define I2C_RX_BUF_DISABLE      0                   // I2C master doesn't need buffer
 #define MCP23017_ADDR           0x20                // MCP23017 I2C address
 #define MCP23017_IODIRA         0x00                // MCP23017 IODIRA register address
 #define MCP23017_IODIRB         0x01                // MCP23017 IODIRB register address

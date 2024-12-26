@@ -10,6 +10,9 @@
 static TaskHandle_t taskHandle;
 
 
+i2c_master_bus_handle_t i2c_bus = NULL;     // FIXME: Move this to local, do not use it as a global var
+
+
 void keyboardInit() {
     // Set up the GPIO for the input button with a pull-up resistor
     gpio_config_t io_conf = {
@@ -146,41 +149,52 @@ void taskKeyboard1(void *pvParameter) {
  * I2C bus master initialization
  */
 esp_err_t i2c_MasterInit() {
-    int i2c_master_port = I2C_MASTER;
-    i2c_config_t conf = {
-        .mode = I2C_MODE_MASTER,
+    ESP_LOGI(TAG_KEYBOARD, "I2C Initialization");
+    // i2c_master_bus_handle_t i2c_bus = NULL;
+    i2c_master_bus_config_t configuration = {
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .i2c_port   = I2C_MASTER,
         .sda_io_num = I2C_SDA,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
         .scl_io_num = I2C_SCL,
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master.clk_speed = I2C_FREQ_HZ,
-        // .clk_flags          = 0,          // Optional, you can use I2C_SCLK_SRC_FLAG_* flags to choose i2c source clock here
+        .glitch_ignore_cnt = 7,
+        .flags.enable_internal_pullup = true,
     };
-    esp_err_t err = i2c_param_config(i2c_master_port, &conf);
+    i2c_master_bus_handle_t bus_handle;
+    esp_err_t err = i2c_new_master_bus(&configuration, &bus_handle);
     if (err != ESP_OK) {
-        ESP_LOGI(TAG_KEYBOARD, "I2C init failed");
+        ESP_LOGE(TAG_KEYBOARD, "Failed to initialize I2C master bus: %s", esp_err_to_name(err));
         return err;
     }
-    ESP_LOGI(TAG_KEYBOARD, "I2C initialized successfully");
-    return i2c_driver_install(i2c_master_port, conf.mode, I2C_RX_BUF_DISABLE, I2C_TX_BUF_DISABLE, 0);
+    
+    i2c_device_config_t dev_cfg = {
+        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+        .device_address = MCP23017_ADDR,
+        .scl_speed_hz = I2C_FREQ_HZ,
+    };
+    i2c_master_dev_handle_t dev_handle;
+    err = i2c_master_bus_add_device(bus_handle, &dev_cfg, &dev_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG_KEYBOARD, "Failed to initialize I2C master bus: %s", esp_err_to_name(err));
+        return err;
+    }
+    ESP_LOGI(TAG_KEYBOARD, "I2C Initialized successfully");
+    return ESP_OK;
 } /**/
 
 
-// /**
-//  * @brief Write a sequence of bytes to a MCP23017 register
-//  */
-// esp_err_t mcp23017_RegisterWrite(uint8_t reg_addr, uint8_t *data, size_t len) {
-//     int ret;
-//     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-//     i2c_master_start(cmd);
-//     i2c_master_write_byte(cmd, MCP23017_ADDR << 1 | WRITE_BIT, ACK_CHECK_EN);
-//     i2c_master_write_byte(cmd, reg_addr, ACK_CHECK_EN);
-//     i2c_master_write(cmd, data, len, ACK_CHECK_EN);
-//     i2c_master_stop(cmd);
-//     ret = i2c_master_cmd_begin(I2C_MASTER, cmd, I2C_TIMEOUT_MS / portTICK_PERIOD_MS);
-//     i2c_cmd_link_delete(cmd);
-//     return ret;
-// } /**/
+/**
+ * Write a sequence of bytes to a MCP23017 register
+ */
+esp_err_t mcp23017_RegisterWrite(uint8_t reg_addr, uint8_t data) {
+    ESP_LOGI(TAG_KEYBOARD, "Configuring MCP23017...");
+    // uint8_t writeBuffer[2] = {reg_addr, data};
+    // esp_err_t err = i2c_master_write_to_device(I2C_MASTER, MCP23017_ADDR, writeBuffer, sizeof(writeBuffer), 1000 / portTICK_PERIOD_MS);
+    // if (err != ESP_OK) {
+    //     ESP_LOGE(TAG_KEYBOARD, "Error writing to MCP23017: %s", esp_err_to_name(err));
+    //     return err;
+    // }
+    return ESP_OK;
+} /**/
 
 
 // void mcp23017_Setup() {
@@ -198,8 +212,16 @@ void taskKeyboard(void *pvParameter) {
     ESP_LOGI(TAG_KEYBOARD, "Task created");
     ESP_ERROR_CHECK(i2c_MasterInit());
 
+    // Configure GPIOA and GPIOB as inputs
+    uint8_t data[2] = {0xFF, 0xFF}; // 0xFF = 11111111 (all ones for input)
+    i2c_master_dev_handle_t i2c_master = i2c_master_get_bus(I2C_MASTER);
+    i2c_master_begin_transaction(i2c_master, MCP23017_ADDR, I2C_TIMEOUT_MS / portTICK_PERIOD_MS);
+    i2c_master_write_byte(i2c_master, MCP23017_IODIRA, true);
+    i2c_master_write(i2c_master, data, 2, true);
+    i2c_master_end_transaction(i2c_master);
 
-    // // Configure GPIOA and GPIOB as inputs
+
+    // ESP_ERROR_CHECK(mcp23017_RegisterWrite(MCP23017_IODIRA, (uint8_t)0xFF));
     // uint8_t data = 0xFF; // Set all pins as inputs
     // ESP_ERROR_CHECK(mcp23017_register_write(MCP23017_IODIRA, &data, 1));
     // ESP_ERROR_CHECK(mcp23017_register_write(MCP23017_IODIRB, &data, 1));
