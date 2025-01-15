@@ -2,7 +2,7 @@
 <div align="center">
   <picture>
     <img src="logo.png" height="150" alt="Linux Logo">
-  </picture>
+  </picture><br>
 All purpose robot and appliance controller
 </div>
 
