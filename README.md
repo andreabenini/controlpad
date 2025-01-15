@@ -1,4 +1,10 @@
 # controlpad - controller for appliances and robots
+<div align="center">
+  <picture>
+    <img src="logo.png" height="150" alt="Linux Logo">
+  </picture>
+All purpose robot and appliance controller
+</div>
 
 
 ### Features
@@ -12,6 +18,7 @@
 
 ### Communication
 - ESP Now
+- Bluetooth
 - Bluetooth LE
 - WiFi (TCP)
 
