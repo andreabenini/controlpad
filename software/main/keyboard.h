@@ -24,7 +24,7 @@
 #define I2C_MASTER              I2C_NUM_0           // I2C port number for master dev
 #define I2C_SDA                 8                   // gpio number for I2C master data
 #define I2C_SCL                 9                   // gpio number for I2C master clock
-#define I2C_FREQ_HZ             100000              // I2C master clock frequency
+#define I2C_FREQ_HZ             400000              // I2C master clock frequency
 #define I2C_TIMEOUT_MS          1000
 // #define I2C_TX_BUF_DISABLE      0                   // I2C master doesn't need buffer
 // #define I2C_RX_BUF_DISABLE      0                   // I2C master doesn't need buffer
