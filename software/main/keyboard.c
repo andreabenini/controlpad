@@ -159,24 +159,24 @@ esp_err_t i2c_MasterInit(i2c_master_bus_handle_t *handleBus, i2c_master_dev_hand
         .flags.enable_internal_pullup = true,
     };
     // Install I2C master driver
-    esp_err_t err = i2c_master_bus_install(&configuration, handleBus);
+    esp_err_t err = i2c_new_master_bus(&configuration, handleBus);
     if (err != ESP_OK) {
         ESP_LOGE(TAG_KEYBOARD, "I2C master bus install failed: %s", esp_err_to_name(err));
         return err;
     }
-    // i2c_device_config_t deviceConfig = {
-    //     .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-    //     .device_address = MCP23017_ADDR,
-    //     .scl_speed_hz = I2C_FREQ_HZ,
-    // };
-    // // i2c_master_dev_handle_t dev_handle;
-    // err = i2c_master_bus_add_device(bus_handle, &deviceConfig, &dev_handle);
-    // if (err != ESP_OK) {
-    //     ESP_LOGE(TAG_KEYBOARD, "Failed to initialize I2C master bus: %s", esp_err_to_name(err));
-    //     return err;
-    // }
-    // ESP_LOGI(TAG_KEYBOARD, "I2C Initialized successfully");
-    // return ESP_OK;
+    i2c_device_config_t deviceConfig = {
+        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+        .device_address = MCP23017_ADDR,
+        .scl_speed_hz = I2C_FREQ_HZ,
+    };
+    // i2c_master_dev_handle_t dev_handle;
+    err = i2c_master_bus_add_device(*handleBus, &deviceConfig, handleDevice);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG_KEYBOARD, "Failed to initialize I2C master bus: %s", esp_err_to_name(err));
+        return err;
+    }
+    ESP_LOGI(TAG_KEYBOARD, "I2C Initialized successfully");
+    return ESP_OK;
 } /**/
 
 
@@ -210,7 +210,11 @@ void taskKeyboard(void *pvParameter) {
     ESP_LOGI(TAG_KEYBOARD, "Task created");
     i2c_master_bus_handle_t handleBus;
     i2c_master_dev_handle_t handleDevice;
-    ESP_ERROR_CHECK(i2c_MasterInit(&handleBus, &handleDevice));
+    esp_err_t err = i2c_MasterInit(&handleBus, &handleDevice);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG_KEYBOARD, "Failed to initialize I2C Master");
+        return;
+    }
 
     // Configure GPIOA and GPIOB as inputs
     // uint8_t data[2] = {0xFF, 0xFF}; // 0xFF = 11111111 (all ones for input)
