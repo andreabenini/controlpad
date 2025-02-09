@@ -1,5 +1,9 @@
 # tmp work files
+# blender files
 *.blend
+# Kicad backups
+*-backups
+fp-info-cache
 
 # Debug files
 tmp*
