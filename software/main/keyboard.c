@@ -183,17 +183,16 @@ esp_err_t i2c_MasterInit(i2c_master_bus_handle_t *handleBus, i2c_master_dev_hand
 /**
  * Write a sequence of bytes to a MCP23017 register
  */
-esp_err_t mcp23017_RegisterWrite(uint8_t reg_addr, uint8_t data) {
-    ESP_LOGI(TAG_KEYBOARD, "Configuring MCP23017...");
-    // uint8_t writeBuffer[2] = {reg_addr, data};
-    // esp_err_t err = i2c_master_write_to_device(I2C_MASTER, MCP23017_ADDR, writeBuffer, sizeof(writeBuffer), 1000 / portTICK_PERIOD_MS);
-    // if (err != ESP_OK) {
-    //     ESP_LOGE(TAG_KEYBOARD, "Error writing to MCP23017: %s", esp_err_to_name(err));
-    //     return err;
-    // }
-    return ESP_OK;
+esp_err_t mcp23017_RegisterWrite(i2c_master_dev_handle_t handleDevice, uint8_t registerAddress, uint8_t data) {
+    ESP_LOGI(TAG_KEYBOARD, "I2C Configuring MCP23017...");
+    uint8_t writeBuffer[2] = {registerAddress, data};
+    return i2c_master_transmit(handleDevice, writeBuffer, 2, -1);
 } /**/
 
+// Read from MCP23017 registers
+esp_err_t mcp23017_RegisterRead(i2c_master_dev_handle_t handleDevice, uint8_t registerAddress, uint8_t *data) {
+    return i2c_master_transmit_receive(handleDevice, &registerAddress, 1, data, 1, -1);
+} /**/
 
 // void mcp23017_Setup() {
 //     // Configure GPIOA and GPIOB as inputs
@@ -202,8 +201,6 @@ esp_err_t mcp23017_RegisterWrite(uint8_t reg_addr, uint8_t data) {
 //     ESP_ERROR_CHECK(mcp23017_RegisterWrite(MCP23017_IODIRB, &data, 1));
 //     ESP_LOGI(TAG_KEYBOARD, "MCP23017 configured as inputs");
 // } /**/
-
-
 
 
 void taskKeyboard(void *pvParameter) {
@@ -215,15 +212,32 @@ void taskKeyboard(void *pvParameter) {
         ESP_LOGE(TAG_KEYBOARD, "Failed to initialize I2C Master");
         return;
     }
+    // Configure GPIOA as inputs
+    err = mcp23017_RegisterWrite(handleDevice, MCP23017_IODIRA, 0xFF);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG_KEYBOARD, "Failed to configure GPIOA");
+        i2c_master_bus_rm_device(handleDevice);
+        i2c_del_master_bus(handleBus);
+        return;
+    }
+    ESP_LOGI(TAG_KEYBOARD, "I2C MCP23017 inputs configuration completed");
 
-    // Configure GPIOA and GPIOB as inputs
-    // uint8_t data[2] = {0xFF, 0xFF}; // 0xFF = 11111111 (all ones for input)
-    // i2c_master_dev_handle_t i2c_master = i2c_master_get_bus(I2C_MASTER);
-    // i2c_master_begin_transaction(i2c_master, MCP23017_ADDR, I2C_TIMEOUT_MS / portTICK_PERIOD_MS);
-    // i2c_master_write_byte(i2c_master, MCP23017_IODIRA, true);
-    // i2c_master_write(i2c_master, data, 2, true);
-    // i2c_master_end_transaction(i2c_master);
+    // Read GPIO Values
+    uint8_t gpioValue;
+    err = mcp23017_RegisterRead(handleDevice, MCP23017_IODIRA, &gpioValue);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG_KEYBOARD, "Failed to read GPIOA");
+        // Clean up before returning
+        i2c_master_bus_rm_device(handleDevice);
+        i2c_del_master_bus(handleBus);
+        return;
+    }
+    ESP_LOGI(TAG_KEYBOARD, "I2C GPIOA value: 0x%02X", gpioValue);
 
+    // Clean up
+    i2c_master_bus_rm_device(handleDevice);
+    i2c_del_master_bus(handleBus);
+    ESP_LOGI(TAG_KEYBOARD, "I2C bus closed");
 
     // ESP_ERROR_CHECK(mcp23017_RegisterWrite(MCP23017_IODIRA, (uint8_t)0xFF));
     // uint8_t data = 0xFF; // Set all pins as inputs
