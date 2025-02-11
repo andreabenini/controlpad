@@ -10,9 +10,6 @@
 static TaskHandle_t taskHandle;
 
 
-i2c_master_bus_handle_t i2c_bus = NULL;     // FIXME: Move this to local, do not use it as a global var
-
-
 void keyboardInit() {
     // Set up the GPIO for the input button with a pull-up resistor
     gpio_config_t io_conf = {
@@ -224,15 +221,17 @@ void taskKeyboard(void *pvParameter) {
 
     // Read GPIO Values
     uint8_t gpioValue;
-    err = mcp23017_RegisterRead(handleDevice, MCP23017_IODIRA, &gpioValue);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG_KEYBOARD, "Failed to read GPIOA");
-        // Clean up before returning
-        i2c_master_bus_rm_device(handleDevice);
-        i2c_del_master_bus(handleBus);
-        return;
+    for (uint16_t i=0; i<30000; i++) {
+        err = mcp23017_RegisterRead(handleDevice, MCP23017_IODIRA, &gpioValue);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG_KEYBOARD, "Failed to read GPIOA");
+            // Clean up before returning
+            i2c_master_bus_rm_device(handleDevice);
+            i2c_del_master_bus(handleBus);
+            return;
+        }
+        ESP_LOGI(TAG_KEYBOARD, "I2C [%d] GPIOA value: 0x%02X", i, gpioValue);
     }
-    ESP_LOGI(TAG_KEYBOARD, "I2C GPIOA value: 0x%02X", gpioValue);
 
     // Clean up
     i2c_master_bus_rm_device(handleDevice);
@@ -258,7 +257,6 @@ void taskKeyboard(void *pvParameter) {
 
     //     vTaskDelay(1000 / portTICK_PERIOD_MS);
     // }
-
 
     ESP_LOGI(TAG_KEYBOARD, "Task closed");
     vTaskDelete(NULL);                                      // Delete the task, without this I'm getting a guru meditation error with core0 in panic mode
