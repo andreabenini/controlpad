@@ -186,18 +186,30 @@ esp_err_t mcp23017_RegisterWrite(i2c_master_dev_handle_t handleDevice, uint8_t r
     return i2c_master_transmit(handleDevice, writeBuffer, 2, -1);
 } /**/
 
+
 // Read from MCP23017 registers
 esp_err_t mcp23017_RegisterRead(i2c_master_dev_handle_t handleDevice, uint8_t registerAddress, uint8_t *data) {
     return i2c_master_transmit_receive(handleDevice, &registerAddress, 1, data, 1, -1);
 } /**/
 
-// void mcp23017_Setup() {
-//     // Configure GPIOA and GPIOB as inputs
-//     uint8_t data = 0xFF; // Set all pins as inputs
-//     ESP_ERROR_CHECK(mcp23017_RegisterWrite(MCP23017_IODIRA, &data, 1));
-//     ESP_ERROR_CHECK(mcp23017_RegisterWrite(MCP23017_IODIRB, &data, 1));
-//     ESP_LOGI(TAG_KEYBOARD, "MCP23017 configured as inputs");
-// } /**/
+
+// Initialize button inputs
+// Configure GPIOA as inputs
+esp_err_t mcp23017_RegisterInit(i2c_master_dev_handle_t handleDevice) {
+    esp_err_t err;
+
+    // Configure GPIOA and GPIOB as inputs
+    // Set pins A0-A3 as inputs (1 = input, 0 = output)
+    // #define BUTTON_MASK                0x0F    // Mask for buttons on A0-A3
+    // #define MCP23017_REG_IODIRA        0x00    // I/O direction register A
+    err = mcp23017_RegisterWrite(handleDevice, MCP23017_IODIRA, 0x0F);          // Mask for buttons on A0-A3
+    if (err != ESP_OK) return err;
+    // Enable pull-up resistors on A0-A3
+    // #define MCP23017_REG_GPPUA         0x0C    // Pull-up resistor register A
+    err = mcp23017_RegisterWrite(handleDevice, 0x0C, 0x0F);
+    if (err != ESP_OK) return err;
+    return ESP_OK;
+}
 
 
 void taskKeyboard(void *pvParameter) {
@@ -209,10 +221,11 @@ void taskKeyboard(void *pvParameter) {
         ESP_LOGE(TAG_KEYBOARD, "Failed to initialize I2C Master");
         return;
     }
-    // Configure GPIOA as inputs
-    err = mcp23017_RegisterWrite(handleDevice, MCP23017_IODIRA, 0xFF);
+
+    // Initialize buttons
+    err = mcp23017_RegisterInit(handleDevice);
     if (err != ESP_OK) {
-        ESP_LOGE(TAG_KEYBOARD, "Failed to configure GPIOA");
+        ESP_LOGE(TAG_KEYBOARD, "Failed to initialize push buttons");
         i2c_master_bus_rm_device(handleDevice);
         i2c_del_master_bus(handleBus);
         return;
@@ -220,9 +233,10 @@ void taskKeyboard(void *pvParameter) {
     ESP_LOGI(TAG_KEYBOARD, "I2C MCP23017 inputs configuration completed");
 
     // Read GPIO Values
+    // #define MCP23017_REG_GPIOA         0x12    // GPIO register A
     uint8_t gpioValue;
     for (uint16_t i=0; i<30000; i++) {
-        err = mcp23017_RegisterRead(handleDevice, MCP23017_IODIRA, &gpioValue);
+        err = mcp23017_RegisterRead(handleDevice, MCP23017_GPIOA, &gpioValue);
         if (err != ESP_OK) {
             ESP_LOGE(TAG_KEYBOARD, "Failed to read GPIOA");
             // Clean up before returning
@@ -230,34 +244,22 @@ void taskKeyboard(void *pvParameter) {
             i2c_del_master_bus(handleBus);
             return;
         }
-        ESP_LOGI(TAG_KEYBOARD, "I2C [%d] GPIOA value: 0x%02X", i, gpioValue);
+        // Since buttons are connected to ground and pull-ups are enabled,
+        // a 0 bit means the button is pressed, 1 means not pressed
+        // #define BUTTON_MASK                0x0F    // Mask for buttons on A0-A3
+        gpioValue = (~gpioValue) & 0x0F;    // Invert and mask to get pressed states
+        ESP_LOGI(TAG_KEYBOARD, "I2C [%d] GPIOA value: A0:%d A1:%d A2:%d A3:%d",
+            i,
+            (gpioValue & 0x01) > 0,
+            (gpioValue & 0x02) > 0,
+            (gpioValue & 0x04) > 0,
+            (gpioValue & 0x08) > 0);
+        vTaskDelay(pdMS_TO_TICKS(100));         // Read every 100ms
     }
-
     // Clean up
     i2c_master_bus_rm_device(handleDevice);
     i2c_del_master_bus(handleBus);
     ESP_LOGI(TAG_KEYBOARD, "I2C bus closed");
-
-    // ESP_ERROR_CHECK(mcp23017_RegisterWrite(MCP23017_IODIRA, (uint8_t)0xFF));
-    // uint8_t data = 0xFF; // Set all pins as inputs
-    // ESP_ERROR_CHECK(mcp23017_register_write(MCP23017_IODIRA, &data, 1));
-    // ESP_ERROR_CHECK(mcp23017_register_write(MCP23017_IODIRB, &data, 1));
-    // ESP_LOGI(TAG, "MCP23017 configured as inputs");
-
-    // while (1) {
-    //     // Read GPIOA and GPIOB
-    //     uint8_t gpioa_data;
-    //     uint8_t gpiob_data;
-    //     ESP_ERROR_CHECK(mcp23017_register_read(MCP23017_GPIOA, &gpioa_data, 1));
-    //     ESP_ERROR_CHECK(mcp23017_register_read(MCP23017_GPIOB, &gpiob_data, 1));
-
-    //     // Print the values
-    //     ESP_LOGI(TAG, "GPIOA: 0x%02x", gpioa_data);
-    //     ESP_LOGI(TAG, "GPIOB: 0x%02x", gpiob_data);
-
-    //     vTaskDelay(1000 / portTICK_PERIOD_MS);
-    // }
-
     ESP_LOGI(TAG_KEYBOARD, "Task closed");
     vTaskDelete(NULL);                                      // Delete the task, without this I'm getting a guru meditation error with core0 in panic mode
 } /**/
