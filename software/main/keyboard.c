@@ -181,7 +181,7 @@ esp_err_t i2c_MasterInit(i2c_master_bus_handle_t *handleBus, i2c_master_dev_hand
  * Write a sequence of bytes to a MCP23017 register
  */
 esp_err_t mcp23017_RegisterWrite(i2c_master_dev_handle_t handleDevice, uint8_t registerAddress, uint8_t data) {
-    ESP_LOGI(TAG_KEYBOARD, "I2C Configuring MCP23017...");
+    ESP_LOGI(TAG_KEYBOARD, "I2C MCP23017 write (0x%02X)", registerAddress);
     uint8_t writeBuffer[2] = {registerAddress, data};
     return i2c_master_transmit(handleDevice, writeBuffer, 2, -1);
 } /**/
@@ -196,12 +196,12 @@ esp_err_t mcp23017_RegisterRead(i2c_master_dev_handle_t handleDevice, uint8_t re
 // Initialize button inputs
 // Configure GPIOA as inputs
 esp_err_t mcp23017_RegisterInit(i2c_master_dev_handle_t handleDevice) {
-    esp_err_t err;
-
+    ESP_LOGI(TAG_KEYBOARD, "I2C Configuring MCP23017...");
     // Configure GPIOA and GPIOB as inputs
     // Set pins A0-A3 as inputs (1 = input, 0 = output)
     // #define BUTTON_MASK                0x0F    // Mask for buttons on A0-A3
     // #define MCP23017_REG_IODIRA        0x00    // I/O direction register A
+    esp_err_t err;
     err = mcp23017_RegisterWrite(handleDevice, MCP23017_IODIRA, 0x0F);          // Mask for buttons on A0-A3
     if (err != ESP_OK) return err;
     // Enable pull-up resistors on A0-A3
@@ -219,15 +219,17 @@ void taskKeyboard(void *pvParameter) {
     esp_err_t err = i2c_MasterInit(&handleBus, &handleDevice);
     if (err != ESP_OK) {
         ESP_LOGE(TAG_KEYBOARD, "Failed to initialize I2C Master");
+        vTaskDelete(NULL);
         return;
     }
 
     // Initialize buttons
     err = mcp23017_RegisterInit(handleDevice);
     if (err != ESP_OK) {
-        ESP_LOGE(TAG_KEYBOARD, "Failed to initialize push buttons");
+        ESP_LOGE(TAG_KEYBOARD, "Failed to initialize push buttons (0x%04X)", err, err);
         i2c_master_bus_rm_device(handleDevice);
         i2c_del_master_bus(handleBus);
+        vTaskDelete(NULL);
         return;
     }
     ESP_LOGI(TAG_KEYBOARD, "I2C MCP23017 inputs configuration completed");
@@ -242,6 +244,7 @@ void taskKeyboard(void *pvParameter) {
             // Clean up before returning
             i2c_master_bus_rm_device(handleDevice);
             i2c_del_master_bus(handleBus);
+            vTaskDelete(NULL);
             return;
         }
         // Since buttons are connected to ground and pull-ups are enabled,
@@ -254,12 +257,12 @@ void taskKeyboard(void *pvParameter) {
             (gpioValue & 0x02) > 0,
             (gpioValue & 0x04) > 0,
             (gpioValue & 0x08) > 0);
-        vTaskDelay(pdMS_TO_TICKS(100));         // Read every 100ms
+        vTaskDelay(pdMS_TO_TICKS(100));             // Read every 100ms
     }
     // Clean up
     i2c_master_bus_rm_device(handleDevice);
     i2c_del_master_bus(handleBus);
     ESP_LOGI(TAG_KEYBOARD, "I2C bus closed");
     ESP_LOGI(TAG_KEYBOARD, "Task closed");
-    vTaskDelete(NULL);                                      // Delete the task, without this I'm getting a guru meditation error with core0 in panic mode
+    vTaskDelete(NULL);                              // Delete the task, without this I'm getting a guru meditation error with core0 in panic mode
 } /**/
