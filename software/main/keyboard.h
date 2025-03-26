@@ -11,7 +11,7 @@
 #define BUTTON_START            GPIO_NUM_10         // GPIO 10  (last gpio left, everything else on I2C external bus)
 #define BUTTON_I2C_MASK         0x0F                // Mask for buttons on A0-A3
 #define BUTTON_I2C_NUM          4                   // Digital buttons on I2C this module is handling
-#define TIME_POLL_DELAY         100                 // Delay between two reads      // TODO: Go down to 10, seems to be possible with this new loop
+#define TIME_POLL_DELAY         10                  // Delay between two reads
 #define TIME_DEBOUNCE_BUTTONS   50                  // Debounce time in milliseconds, should be greater than TIME_POLL_DELAY (ie: 10, 50)
 // Define Analog Joysticks
 #define DEFAULT_VREF            1100
