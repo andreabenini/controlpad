@@ -8,9 +8,9 @@
 
 
 // Define GPIO for the buttons
-#define BUTTON_START            GPIO_NUM_10         // GPIO 10  (last gpio left, everything else on I2C external bus)
-#define BUTTON_I2C_MASK         0x0F                // Mask for buttons on A0-A3
-#define BUTTON_I2C_NUM          4                   // Digital buttons on I2C this module is handling
+#define GPIO_BUTTON_START       GPIO_NUM_10         // GPIO 10  (last gpio left, everything else on I2C external bus)
+#define BUTTON_I2C_MASK         0xFF                // Mask for buttons on A0-A3
+#define BUTTON_I2C_NUM          16                  // Digital buttons on I2C this module is handling
 #define TIME_POLL_DELAY         10                  // Delay between two reads
 #define TIME_DEBOUNCE_BUTTONS   50                  // Debounce time in milliseconds, should be greater than TIME_POLL_DELAY (ie: 10, 50)
 // Define Analog Joysticks
@@ -25,7 +25,7 @@
 #define ADC_CONV_MODE           ADC_CONV_SINGLE_UNIT_1
 
 // I2C Bus setup
-#define I2C_MASTER              I2C_NUM_0           // I2C port number for master dev
+#define I2C_MASTER              I2C_NUM_0           // I2C master port number
 #define I2C_SDA                 8                   // gpio number for I2C master data
 #define I2C_SCL                 9                   // gpio number for I2C master clock
 #define I2C_FREQ_HZ             400000              // I2C master clock frequency (400 KHz)
@@ -36,6 +36,7 @@
 #define MCP23017_GPIOA          0x12                // MCP23017 GPIOA register address
 #define MCP23017_GPIOB          0x13                // MCP23017 GPIOB register address
 #define MCP23017_REG_GPPUA      0x0C                // Pull-up resistor register A
+#define MCP23017_REG_GPPUB      0x0D                // Pull-up resistor register B
 
 
 #if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2
@@ -49,50 +50,51 @@
 #endif
 
 
-// TODO: Remove or refactor this struct, buttonStates struct is handling them
-typedef struct {
-    bool        buttonStart,                        // Middle START button
-                buttonMenu,                         // Menu button below the StartButton
-                buttonSelect,                       // Top left
-                buttonOptions,                      // Top right
-                buttonDPadLeft,                     // Left DPAD (up, down, left right)
-                buttonDPadRight,
-                buttonDPadTop,
-                buttonDPadDown,
-                buttonA,                            // A,B,X,Y  Using classic PS layout
-                buttonB,
-                buttonX,
-                buttonY,
-                buttonLT,                           // Left Top      [digital]
-                buttonRT;                           // Right Top     [digital]
-    uint16_t    buttonLB,                           // Left Bottom   [analog ]
-                buttonRB,                           // Right Bottom  [analog ]
-                joystick1_X,                        // Left joystick
-                joystick1_Y,
-                joystick2_X,                        // Right joystick
-                joystick2_Y;
-} keyboardStatus;
+#define B_A                 0                       // A,B,X,Y  Using classic PS layout
+#define B_B                 1
+#define B_X                 2
+#define B_Y                 3
+#define B_MENU              4                       // Menu button, just below the start button B_START
+#define B_OPTION            5                       // Top right options button
+#define B_RIGHT_TOP         6                       // R1 - Right Top button
+#define B_RIGHT_BOTTOM      7                       // R2 - Right Bottom button
+#define B_DPAD_LEFT         8                       // Left DPAD (left, right, up, down)
+#define B_DPAD_RIGHT        9
+#define B_DPAD_UP           10
+#define B_DPAD_DOWN         11
+#define B_SELECT            12                      // Top left select button
+#define B_LEFT_TOP          13                      // L1 - Left Top button
+#define B_LEFT_BOTTOM       14                      // L2 - Left Bottom button
+#define B_CUSTOM            15                      // Unassigned custom buttom
+#define B_START             BUTTON_I2C_NUM          // Middle start button
 
-
-// Track debounce state for each I2C button
+// button struct to handle debounce state for each button
 typedef struct {
-    bool        stateCurrent,                       // Current debounced state
-                stateLastRaw;                       // Last raw state read
-    uint32_t    timeLastChange;                     // Time of last state change
+    bool            stateCurrent,                   // Current debounced state
+                    stateLastRaw;                   // Last raw state read
+    uint32_t        timeLastChange;                 // Time of last state change
 } button_state_t;
+// Keyboard Status structure
+typedef struct {
+    button_state_t  button[BUTTON_I2C_NUM+1];       // I2C Buttons + Start button (physically handled from the board)
+    uint16_t        joystick1_X,                    // Left joystick
+                    joystick1_Y,
+                    joystick2_X,                    // Right joystick
+                    joystick2_Y;
+} keyboardStatus;
 
 
 
 // Main task for the keyboard management
 void taskKeyboard(void *pvParameter);
-void buttonEvent(uint8_t i2cButtonData, uint16_t counter);
 
 // Other hw functions
 void keyboardInit();
 void joystickInit(adc_channel_t (*channel)[4], adc_continuous_handle_t *adcHandle);
+void buttonEvent(uint8_t gpioA_data, uint8_t gpioB_data, uint16_t counter);
 
 // I2C MCP 23017 functions
-esp_err_t mcp23017_RegisterInit(i2c_master_dev_handle_t handleDevice);
+esp_err_t mcp23017_Init(i2c_master_dev_handle_t handleDevice);
 esp_err_t mcp23017_RegisterWrite(i2c_master_dev_handle_t handleDevice, uint8_t registerAddress, uint8_t data);
 esp_err_t mcp23017_RegisterRead(i2c_master_dev_handle_t handleDevice, uint8_t registerAddress, uint8_t *data);
 
