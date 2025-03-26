@@ -8,7 +8,10 @@
 
 
 // Define GPIO for the buttons
-#define BUTTON_START            GPIO_NUM_10         // GPIO 10  (last gpio left, everything else on external bus)
+#define BUTTON_START            GPIO_NUM_10         // GPIO 10  (last gpio left, everything else on I2C external bus)
+#define BUTTON_I2C_MASK         0x0F                // Mask for buttons on A0-A3
+#define BUTTON_I2C_NUM          4                   // Digital buttons on I2C this module is handling
+#define POLL_DELAY              100                 // Delay between two reads      // TODO: Go down to 10, seems to be possible with this new loop
 // Define Analog Joysticks
 #define DEFAULT_VREF            1100
 #define JOYSTICK1_X             ADC_CHANNEL_0       // GPIO0
@@ -24,19 +27,14 @@
 #define I2C_MASTER              I2C_NUM_0           // I2C port number for master dev
 #define I2C_SDA                 8                   // gpio number for I2C master data
 #define I2C_SCL                 9                   // gpio number for I2C master clock
-#define I2C_FREQ_HZ             400000              // I2C master clock frequency
+#define I2C_FREQ_HZ             400000              // I2C master clock frequency (400 KHz)
 #define I2C_TIMEOUT_MS          1000
-// #define I2C_TX_BUF_DISABLE      0                   // I2C master doesn't need buffer
-// #define I2C_RX_BUF_DISABLE      0                   // I2C master doesn't need buffer
 #define MCP23017_ADDR           0x20                // MCP23017 I2C address
 #define MCP23017_IODIRA         0x00                // MCP23017 IODIRA register address
 #define MCP23017_IODIRB         0x01                // MCP23017 IODIRB register address
 #define MCP23017_GPIOA          0x12                // MCP23017 GPIOA register address
 #define MCP23017_GPIOB          0x13                // MCP23017 GPIOB register address
-
-#define WRITE_BIT  0x00  // LSB 0 for write operation
-// #define READ_BIT   0x01  // LSB 1 for read operation
-#define ACK_CHECK_EN 0x1
+#define MCP23017_REG_GPPUA      0x0C                // Pull-up resistor register A
 
 
 #if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2
@@ -50,6 +48,7 @@
 #endif
 
 
+// TODO: Remove or refactor this struct, buttonStates struct is handling them
 typedef struct {
     bool        buttonStart,                        // Middle START button
                 buttonMenu,                         // Menu button below the StartButton
@@ -74,11 +73,27 @@ typedef struct {
 } keyboardStatus;
 
 
+// Track debounce state for each I2C button
+typedef struct {
+    bool        stateCurrent,                       // Current debounced state
+                stateLastRaw;                       // Last raw state read
+    uint32_t    timeLastChange;                     // Time of last state change
+} button_state_t;
+
+
+
+// Main task for the keyboard management
+void taskKeyboard(void *pvParameter);
+void buttonEvent(uint8_t i2cButtonData, uint16_t counter);
+
+// Other hw functions
 void keyboardInit();
 void joystickInit(adc_channel_t (*channel)[4], adc_continuous_handle_t *adcHandle);
 
-void taskKeyboard(void *pvParameter);
-
+// I2C MCP 23017 functions
+esp_err_t mcp23017_RegisterInit(i2c_master_dev_handle_t handleDevice);
+esp_err_t mcp23017_RegisterWrite(i2c_master_dev_handle_t handleDevice, uint8_t registerAddress, uint8_t data);
+esp_err_t mcp23017_RegisterRead(i2c_master_dev_handle_t handleDevice, uint8_t registerAddress, uint8_t *data);
 
 
 #define TAG_KEYBOARD    "keyboard"
