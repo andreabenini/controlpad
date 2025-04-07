@@ -104,7 +104,8 @@ esp_err_t joystickInit(adc_channel_t (*channel)[4], adc_continuous_handle_t *adc
 } /**/
 
 
-void app_main(void) {
+void taskKeyboard(void *pvParameter) {
+    ESP_LOGI(TAG_KEYBOARD, "Task Created");
     esp_err_t err;
     adc_channel_t channel[4] = {JOYSTICK1_X, JOYSTICK1_Y, JOYSTICK2_X, JOYSTICK2_Y};
     adc_continuous_handle_t adcHandle = NULL;
@@ -181,4 +182,13 @@ void app_main(void) {
     }
     ESP_ERROR_CHECK(adc_continuous_stop(adcHandle));
     ESP_ERROR_CHECK(adc_continuous_deinit(adcHandle));
+    vTaskDelete(NULL);                                  // Delete the task, without this I'm getting a guru meditation error with core0 in panic mode
+} /**/
+
+
+void app_main(void) {
+    ESP_LOGW(TAG_KEYBOARD, "Program Started");
+    // Create the button task
+    xTaskCreate(taskKeyboard, "taskKeyboard", 2048, NULL, 5, NULL);
+    return;
 } /**/
