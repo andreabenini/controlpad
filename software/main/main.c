@@ -14,6 +14,6 @@
 void app_main(void) {
     ESP_LOGW(TAG_APP, "Program Started");
     // Create the I/O peripherals management task
-    xTaskCreate(taskKeyboard, "taskKeyboard", 2048, NULL, 5, NULL);
+    xTaskCreate(taskKeyboard, "taskKeyboard", 4096, NULL, 5, NULL);
     return;
 } /**/
