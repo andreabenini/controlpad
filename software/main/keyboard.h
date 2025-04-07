@@ -20,7 +20,7 @@
 #define JOYSTICK2_X             ADC_CHANNEL_2       // GPIO2
 #define JOYSTICK2_Y             ADC_CHANNEL_3       // GPIO3
 #define ADC_ATTEN               ADC_ATTEN_DB_12     // Set attenuation to 11dB (0<->3.3V)  [ADC_ATTEN_DB_11 is now deprecated]
-#define ADC_WIDTH               ADC_WIDTH_BIT_12    // Set width to 12-bit for values between 0 and 4095
+#define ADC_WIDTH               SOC_ADC_DIGI_MAX_BITWIDTH   // Set width to 12-bit for values between 0 and 4095
 #define ADC_BUFFER_SIZE         60                  // Buffer size for continous ADC readings (60 works)
 #define ADC_CONV_MODE           ADC_CONV_SINGLE_UNIT_1
 
@@ -85,13 +85,16 @@ typedef struct {
 
 
 
-// Main task for the keyboard management
+// Main tasks for the keyboard management
 void taskKeyboard(void *pvParameter);
+void buttonRead(uint8_t gpioA_data, uint8_t gpioB_data);
+void buttonRead_Start();
+void eventButton(uint8_t button, bool status);
+void eventStatus();
 
 // Other hw functions
-void keyboardInit();
-void joystickInit(adc_channel_t (*channel)[4], adc_continuous_handle_t *adcHandle);
-void buttonEvent(uint8_t gpioA_data, uint8_t gpioB_data, uint16_t counter);
+esp_err_t keyboardInit();
+esp_err_t joystickInit(adc_channel_t (*channel)[4], adc_continuous_handle_t *adcHandle);
 
 // I2C MCP 23017 functions
 esp_err_t mcp23017_Init(i2c_master_dev_handle_t handleDevice);
