@@ -28,7 +28,7 @@
 // #define WIFI_PASSWORD               "SecretWIFIPassword"
 // [Default values] Wireless configuration
 #define WIFI_MAX_RETRIES            5
-#define WIFI_RETRY_TIMEOUT          1500        // ms
+#define WIFI_RETRY_TIMEOUT          1500                // ms
 // [Default values] Bluetooth configuration
 #define DEFAULT_BT_MAC_ADDRESS      "1a:2b:3c:01:01:01" // TODO: Temp fix it after debugging
 
