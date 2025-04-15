@@ -1,4 +1,4 @@
-set(SOURCES     "main.c" "keyboard.c" "display.c" "communication.c")
+set(SOURCES     "main.c" "mainloop.c" "i2c.c" "joystick.c")
 set(REQUIRES    "")
 
 idf_component_register(
