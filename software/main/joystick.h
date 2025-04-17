@@ -2,11 +2,11 @@
 #define JOYSTICK__H
 
 
-#include "freertos/FreeRTOS.h"                      // IWYU pragma: keep
+#include "freertos/FreeRTOS.h"                                  // IWYU pragma: keep
+#include "driver/i2c_master.h"                                  // IWYU pragma: keep
+#include "esp_adc/adc_continuous.h"
 #include <esp_err.h>
 #include <esp_log.h>
-#include "driver/i2c_master.h"                      // IWYU pragma: keep
-#include "esp_adc/adc_continuous.h"
 
 
 // Joysticks initialization
