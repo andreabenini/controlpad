@@ -1,12 +1,10 @@
 // Program Includes
 #include "main.h"
-#include "display.h"
-#include "keyboard.h"
-#include "communication.h"
+#include "mainloop.h"
 
 
 // System includes
-#include "freertos/FreeRTOS.h"
+#include "freertos/FreeRTOS.h"              // IWYU pragma: keep
 #include "freertos/task.h"
 #include <esp_log.h>
 #include <esp_system.h>
@@ -16,8 +14,14 @@
 void app_main(void) {
     ESP_LOGW(TAG_APP, "Program Started");
     // Create the I/O peripherals management task
-    // xTaskCreate(taskDisplay,        "taskDisplay",          2048, NULL, 5, NULL);
-    xTaskCreate(taskKeyboard,       "taskKeyboard",         4096, NULL, 5, NULL);
-    // xTaskCreate(taskCommunication,  "taskCommunication",    2048, NULL, 5, NULL);
+    //      - taskFunction
+    //      - task name for debugging
+    //      - stack size
+    //      - task parameters
+    //      - task priority (lower number = lower priority)
+    //      - task handle (optional)
+    // xTaskCreate(taskMaster,   "taskMaster",   2048, NULL, 3, NULL);
+    xTaskCreate(taskMainLoop, "taskLoop", 4096, NULL, 5, NULL);
+    // xTaskCreate(taskDisplay,  "taskDisplay",  2048, NULL, 1, NULL);
     return;
 } /**/

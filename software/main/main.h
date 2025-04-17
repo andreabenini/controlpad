@@ -2,6 +2,8 @@
 #define MAIN__H
 
 
+// Unknown argument: '-fstrict-volatile-bitfields'clang(drv_unknown_argument)
+
 /**
  * Set project log level, Default is ESP_LOG_INFO. This define can disable logging all at once (for dealing with other serial devices for example)
  * Log level can also be changed with:
