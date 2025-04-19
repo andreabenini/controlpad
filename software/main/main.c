@@ -20,8 +20,5 @@ void app_main(void) {
     //      - task parameters
     //      - task priority (lower number = lower priority)
     //      - task handle (optional)
-    // xTaskCreate(taskMaster,   "taskMaster",   2048, NULL, 3, NULL);
     xTaskCreate(taskMainLoop, "taskLoop", 4096, NULL, 5, NULL);
-    // xTaskCreate(taskDisplay,  "taskDisplay",  2048, NULL, 1, NULL);
-    return;
 } /**/
