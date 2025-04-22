@@ -4,7 +4,7 @@
 
 #include "freertos/FreeRTOS.h"                                  // IWYU pragma: keep
 #include "driver/i2c_master.h"                                  // IWYU pragma: keep
-#include "esp_adc/adc_continuous.h"
+#include "esp_adc/adc_continuous.h"                             // IWYU pragma: keep
 
 
 // I2C initialization
