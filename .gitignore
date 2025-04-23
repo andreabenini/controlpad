@@ -13,3 +13,6 @@ software/.cache
 software/.devcontainer
 software/build
 software/main/secret.h
+
+# Personal test data
+software/server/test.*
