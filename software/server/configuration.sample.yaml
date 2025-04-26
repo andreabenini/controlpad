@@ -1,0 +1,15 @@
+# TCP Sample Profile
+netcat test:
+  mode: tcp
+  
+  # WiFi SSID for the managed network
+  wifi_ssid: wifiSSID
+  # WiFi password
+  wifi_password: wifiPassword
+  # Leave it empty for DHCP or enter static IP if needed
+  wifi_ip:
+
+  # Remote TCP Host IP Address
+  remote_ip: ipAddress
+  # Remote TCP Host port
+  remote_port: tcpPort
