@@ -1,6 +1,9 @@
 #
 # ESP32 options
 #
+# Serial console:
+#       Component config > ESP System Settings > Channel for console output > choose USB Serial/JTAG Controller
+CONFIG_IDF_INIT_VERSION="$IDF_INIT_VERSION"
 
 #
 # Target Device
