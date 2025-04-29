@@ -13,3 +13,27 @@ netcat test:
   remote_ip: ipAddress
   # Remote TCP Host port
   remote_port: tcpPort
+
+  # Keyboard mapping, buttons follow playstation layout
+  # - Each entry is optional, an empty entry ("a: ") is like omitting it entirely
+  # - NULL or missing entries ("a: ") are ignored, no event will be transmitted
+  # - Playstation mapping layout
+  # - Each single profile has its own dedicated mapping
+  # - System button (start in PS layout) cannot be remapped
+  # See samples here to understand how it works
+  map:
+    a:    # When empty is totally ignored, the key will not be transmitted
+    b:
+    x:
+    y:
+    menu:
+    option:
+    right_top:
+    right_bottom:
+    dpad_left:
+    dpad_right:
+    dpad_up:
+    dpad_down:
+    select:
+    left_top:
+    left_bottom:
