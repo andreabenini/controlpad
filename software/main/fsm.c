@@ -1,10 +1,8 @@
 #include "configuration.h"
-
-#include "esp_err.h"
-#include "esp_log.h"
+#include "fsm.h"
+#include "fsm.profile.h"
 #include "fonts.h"
 #include "mainloop.h"
-#include "fsm.h"
 #include "display.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -16,7 +14,7 @@ uint8_t statusCurrent;
 
 typedef struct {
     char    connections[CONFIG_MAX][CONFIG_LEN_NAME];
-    size_t  connectionsNumber;
+    uint8_t connectionsNumber;
     int8_t  first,
             page,
             selected;
@@ -25,14 +23,14 @@ typedef struct {
 objMenu statusMenu;
 
 typedef struct {
+    uint8_t keypressWait;       // 0:NoLock, 1:Lock, 2:PressAnyKey
 } objSystem;
 objSystem systemMenu;
 
 typedef struct {
-    size_t  profile;
-} objProfile;
-objProfile userProfile;
-
+    uint8_t keypressWait;       // 0:NoLock, 1:Lock
+} objReloadConfig;
+objReloadConfig reloadConfig;
 
 
 esp_err_t statusInit() {
@@ -42,16 +40,21 @@ esp_err_t statusInit() {
     statusChange(STATUS_MENU);
     return ESP_OK;
 } /**/
-
-
 void statusChange(uint8_t status) {
     statusCurrent = status;
+    for (uint8_t i=0; i<BUTTON_I2C_NUM; i++) {
+        keyboard.button[i].stateCurrent =
+        keyboard.button[i].stateLastRaw = false;
+    }
     switch (statusCurrent) {
         case STATUS_MENU:
             statusMenuInit();
             break;
         case STATUS_SYSTEM:
             statusSystemInit();
+            break;
+        case STATUS_RELOADCONFIG:
+            statusReloadConfigInit();
             break;
         case STATUS_PROFILE:
             statusProfileInit();
@@ -68,13 +71,14 @@ void eventButton(uint8_t button, bool status) {
         case STATUS_SYSTEM:
             statusSystemKeypress(button, status);
             break;
+        case STATUS_RELOADCONFIG:
+            statusReloadConfigKeypress(button, status);
+            break;
         case STATUS_PROFILE:
             statusProfileKeypress(button, status);
             break;
     }
 } /**/
-
-
 void eventStatus() {
     switch (statusCurrent) {
         case STATUS_MENU:
@@ -82,6 +86,9 @@ void eventStatus() {
             break;
         case STATUS_SYSTEM:
             statusSystemEvent();
+            break;
+        case STATUS_RELOADCONFIG:
+            statusReloadConfigEvent();
             break;
         case STATUS_PROFILE:
             statusProfileEvent();
@@ -116,16 +123,15 @@ void statusMenuInit() {
     statusMenuShow();
 } /**/
 void statusMenuShow() {
-    menu(   (char*) statusMenu.connections,                 // MenuList
-            statusMenu.connectionsNumber,                   // MenuItems,
-            CONFIG_LEN_NAME,                                // ItemLength
-            statusMenu.page,                                // Items per page
-            statusMenu.first,                               // First visible item in the menu
-            statusMenu.selected,                            // Selected Item
-            0, 16,                                          // X,Y
-            &font8x14, LCD_COLOR_BLACK, LCD_COLOR_WHITE);
+    menu((char*) statusMenu.connections,                    // MenuList
+         statusMenu.connectionsNumber,                      // MenuItems,
+         CONFIG_LEN_NAME,                                   // ItemLength
+         statusMenu.page,                                   // Items per page
+         statusMenu.first,                                  // First visible item in the menu
+         statusMenu.selected,                               // Selected Item
+         0, 16,                                             // X,Y
+         &font8x14, LCD_COLOR_BLACK, LCD_COLOR_WHITE);
 } /**/
-
 void statusMenuEvent() {
     if (statusMenu.lockEvent) {
         return;
@@ -155,6 +161,7 @@ void statusMenuEvent() {
             statusChange(STATUS_SYSTEM);
         } else {
             statusChange(STATUS_PROFILE);
+            statusProfileInitProfile(statusMenu.selected);
         }
     } else if (MENU_CANCEL == 1) {
         statusChange(STATUS_MENU);
@@ -171,64 +178,64 @@ void statusMenuKeypress(uint8_t button, bool status) {
  * State: System Configuration, initialization method
  */
 void statusSystemInit() {
-    // Display some context
+    systemMenu.keypressWait = 0;
+    statusSystemShow();
+} /**/
+/**
+ * System Configuration Menu
+ */
+void statusSystemShow() {
     displayBackground(LCD_COLOR_CYAN);
     displayTextBackground(18,  0, " CONFIGURATION ", &font8x12, LCD_COLOR_BLACK, LCD_COLOR_CYAN);
-    displayTextBackground(2,   50, "X", &font8x14, LCD_COLOR_RED, LCD_COLOR_CYAN);
-    displayTextBackground(16,  49, "RELOAD FROM SERVER", &font8x12, LCD_COLOR_BLACK, LCD_COLOR_CYAN);
-    displayTextBackground(2,   70, "Y", &font8x14, LCD_COLOR_RED, LCD_COLOR_CYAN);
-    displayTextBackground(16,  69, "CONFIGURE SERVER", &font8x12, LCD_COLOR_BLACK, LCD_COLOR_CYAN);
-    displayTextBackground(2,   90, "A", &font8x14, LCD_COLOR_RED, LCD_COLOR_CYAN);
-    displayTextBackground(16,  89, "I/O DIAGNOSTICS", &font8x12, LCD_COLOR_BLACK, LCD_COLOR_CYAN);
-    displayTextBackground(2,  110, "B", &font8x14, LCD_COLOR_RED, LCD_COLOR_CYAN);
-    displayTextBackground(16, 109, "RETURN TO MENU", &font8x12, LCD_COLOR_BLACK, LCD_COLOR_CYAN);
-} /**/
-void statusSystemShow() {
-    return;
+    displayTextBackground(4,   70, "X", &font8x14, LCD_COLOR_RED, LCD_COLOR_CYAN);
+    displayTextBackground(20,  69, "SHOW CONFIG", &font8x12, LCD_COLOR_BLACK, LCD_COLOR_CYAN);
+    displayTextBackground(4,   90, "A", &font8x14, LCD_COLOR_RED, LCD_COLOR_CYAN);
+    displayTextBackground(20,  89, "I/O DIAGNOSTICS", &font8x12, LCD_COLOR_BLACK, LCD_COLOR_CYAN);
+    displayTextBackground(4,  110, "B", &font8x14, LCD_COLOR_RED, LCD_COLOR_CYAN);
+    displayTextBackground(20, 109, "RETURN TO MENU", &font8x12, LCD_COLOR_BLACK, LCD_COLOR_CYAN);
 } /**/
 void statusSystemEvent() {
+    switch (systemMenu.keypressWait) {
+        case 0:
+            break;
+        case 1:
+            return;
+    }
     if (keyboard.button[B_SYSTEM_CANCEL].stateCurrent == 1) {
         statusChange(STATUS_MENU);
+    } else if (keyboard.button[B_SYSTEM_CONFIG].stateCurrent == 1) {
+    //     statusLoadConfiguration();   // TODO: Show configurations info (all but password)
     }
 } /**/
 void statusSystemKeypress(uint8_t button, bool status) {
-    return;
+    if (systemMenu.keypressWait==2 && status == 1) {
+        statusSystemShow();
+        systemMenu.keypressWait = 0;
+    }
 } /**/
 
 
-
-// User Profile (Transmit mode)
-void statusProfileInit() {
-    statusChange(STATUS_MENU);                  // TODO:
+/**
+ * Reload system configuration
+ */
+void statusReloadConfigInit() {
+    reloadConfig.keypressWait = 0;
+    ESP_LOGI(TAG_FSM, "Reloading configuration");
+    // Waiting window
+    displayBackground(LCD_COLOR_CYAN);
+    displayWindow(LCD_WIDTH/10, LCD_HEIGHT/5, LCD_WIDTH/10*8, LCD_HEIGHT/2, LCD_COLOR_BLACK, LCD_COLOR_WHITE, 2);
+    displayTextBackground(26, 40, "CONFIGURATION", &font8x12, LCD_COLOR_BLACK, LCD_COLOR_WHITE);
+    displayTextBackground(26, 55, "   UPDATED   ", &font8x12, LCD_COLOR_BLACK, LCD_COLOR_WHITE);
+    displayTextBackground(20, LCD_HEIGHT-14, "PRESS ANY KEY...", &font8x12, LCD_COLOR_BLACK, LCD_COLOR_CYAN);
+    reloadConfig.keypressWait = 1;
+} /**/
+void statusReloadConfigEvent() {
 }
-void statusProfileShow() {
-    return;
-}
-void statusProfileEvent() {
-    ESP_LOGI(TAG_FSM, "I2C "                    // FIXME: Convert it to a Display function
-        "A[%d%d%d%d%d%d%d%d] "
-        "B[%d%d%d%d%d%d%d%d]  "
-        "[%4d,%4d] [%4d,%4d]",
-        keyboard.button[0].stateCurrent,        // A0..7, B0..7 I2C buttons
-        keyboard.button[1].stateCurrent,
-        keyboard.button[2].stateCurrent,
-        keyboard.button[3].stateCurrent,
-        keyboard.button[4].stateCurrent,
-        keyboard.button[5].stateCurrent,
-        keyboard.button[6].stateCurrent,
-        keyboard.button[7].stateCurrent,
-        keyboard.button[8].stateCurrent,
-        keyboard.button[9].stateCurrent,
-        keyboard.button[10].stateCurrent,
-        keyboard.button[11].stateCurrent,
-        keyboard.button[12].stateCurrent,
-        keyboard.button[13].stateCurrent,
-        keyboard.button[14].stateCurrent,
-        keyboard.button[15].stateCurrent,
-        keyboard.joystick1_X, keyboard.joystick1_Y,
-        keyboard.joystick2_X, keyboard.joystick2_Y
-    );
-}
-void statusProfileKeypress(uint8_t button, bool status) {
-    return;
-}
+/**
+ * USER PROFILE LOADING keypress event
+ */
+ void statusReloadConfigKeypress(uint8_t button, bool status) {
+    if (reloadConfig.keypressWait==1 && status==1) {
+        statusChange(STATUS_MENU);
+    }
+} /**/

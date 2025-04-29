@@ -5,6 +5,7 @@
 #include "freertos/FreeRTOS.h"                                  // IWYU pragma: keep
 #include <esp_err.h>
 #include <esp_log.h>
+#include "driver/uart.h"                                        // IWYU pragma: keep
 
 
 #define TAG_FSM                 "fsm"
@@ -12,6 +13,7 @@
 #define STATUS_MENU             0
 #define STATUS_SYSTEM           1
 #define STATUS_PROFILE          2
+#define STATUS_RELOADCONFIG     3
 
 #define MENU_UP                 keyboard.button[B_MENU_UP].stateCurrent
 #define MENU_DOWN               keyboard.button[B_MENU_DOWN].stateCurrent
@@ -37,11 +39,11 @@ void statusSystemInit();
 void statusSystemShow();
 void statusSystemEvent();
 void statusSystemKeypress(uint8_t button, bool status);
-// User Profile (Transmit mode)
-void statusProfileInit();
-void statusProfileShow();
-void statusProfileEvent();
-void statusProfileKeypress(uint8_t button, bool status);
+// Reload config (from remote)
+void statusReloadConfigInit();
+void statusReloadConfigEvent();
+void statusReloadConfigKeypress(uint8_t button, bool status);
+
 
 void eventButton(uint8_t button, bool status);
 void eventStatus();
