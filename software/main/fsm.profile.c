@@ -62,19 +62,6 @@ void statusProfileInitProfile(uint8_t number) {
 } /**/
 
 
-/*
-ESP_ERROR_CHECK failed: esp_err_t 0x103 (ESP_ERR_INVALID_STATE) at 0x4200c340
---- 0x4200c340: wifiConnect at /home/ben/Documents/controlpad/software/main/wifi.c:46 (discriminator 1)
-
-file: "./main/wifi.c" line 46
-func: wifiConnect
-expression: esp_event_loop_create_default()
-
-abort() was called at PC 0x40388d5d on core 0
---- 0x40388d5d: _esp_error_check_failed at /home/ben/esp/v5.4/esp-idf/components/esp_system/esp_err.c:49
-*/
-
-
 /**
  * Init error message Box
  */
