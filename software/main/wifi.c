@@ -46,6 +46,7 @@ void eventHandler(void* arg, esp_event_base_t eventBase, int32_t eventId, void* 
  * 
  * @param ssid     (const char*) WiFi SSID
  * @param password (const char*) WiFi password
+ * @param ip       (char *) IP address of this device once connected
  * @return (esp_err_t) ESP_OK on success, error code otherwise
  */
 esp_err_t wifiConnect(const char* ssid, const char* password, char *ip) {
