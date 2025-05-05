@@ -56,7 +56,8 @@ void statusProfileInitProfile(uint8_t number) {
                                    "   FAILED    ");
             return;
         }
-        displayTextBackground(30, 55, " CONNECTED  ", &font8x16, LCD_COLOR_WHITE, LCD_COLOR_BLACK);
+        displayTextBackground(10, 55, "C O N N E C T E D", &font8x16, LCD_COLOR_WHITE, LCD_COLOR_BLACK);
+        // displayTextBackground(10, 55, "  DISCONNECTED ! ", &font8x16, LCD_COLOR_WHITE, LCD_COLOR_BLACK);
         displayTextBackground(10, LCD_HEIGHT-12*2-2, label, &font8x12, LCD_COLOR_WHITE, LCD_COLOR_BLACK);
         displayText(10, LCD_HEIGHT-12,     "IP",      &font8x12, LCD_COLOR_BLACK);
     }
