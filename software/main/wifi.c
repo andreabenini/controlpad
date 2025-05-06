@@ -4,6 +4,7 @@
 uint8_t             wifiRetries,                    // Connection retries before dropping it off
                     wifiStatus = 0;                 // Generic flag to keep wifi current status
 EventGroupHandle_t  wifiEventGroup;                 // FreeRTOS event group to signal when there's a connection
+esp_netif_t         *netifHandler = NULL;           // Global variable to store the netif pointer
 esp_event_handler_instance_t instanceAnyID;         // Managed event handlers for esp_event_handler_instance_register()
 esp_event_handler_instance_t instanceGotIP;
 
@@ -59,11 +60,16 @@ esp_err_t wifiConnect(const char* ssid, const char* password, char *ip) {
         ESP_LOGE(TAG_WIFI, "    Failed to create the event loop. Error: %s", esp_err_to_name(result));
         return result; // Abort further initialization, including Wi-Fi
     }
-    esp_netif_create_default_wifi_sta();                // Create a network interface. WiFi station mode (client)
+    netifHandler = esp_netif_create_default_wifi_sta();                 // Create a network interface. WiFi station mode (client)
+    if (netifHandler==NULL) {
+        ESP_LOGE(TAG_WIFI, "    Failed to create default WiFi network interface");
+        return ESP_ERR_WIFI_STATE;
+    }
 
+    // Init wifi and register event handlers
     wifi_init_config_t config = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&config));
-    // Register event handlers
+    // ... Register event handlers
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID,    &wifiEvent, NULL, &instanceAnyID));
     ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,   IP_EVENT_STA_GOT_IP, &wifiEvent, NULL, &instanceGotIP));
     
@@ -125,11 +131,24 @@ esp_err_t wifiDisconnect() {
     }
     wifiStatus = 0;
     ESP_LOGI(TAG_WIFI, "Disconnecting from WiFi");
-    ESP_ERROR_CHECK(esp_wifi_stop());                   // Stop WiFi
-    // ESP_ERROR_CHECK(esp_wifi_deinit());                 // Optional: Deinitialize WiFi driver
-    ESP_LOGI(TAG_WIFI, "    Removing event loop");
+
+    ESP_LOGI(TAG_WIFI, "    Unregistering associated events");
     esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID,    &instanceAnyID);
     esp_event_handler_instance_unregister(IP_EVENT,   IP_EVENT_STA_GOT_IP, &instanceGotIP);
+
+    // Stop Wifi
+    esp_wifi_disconnect();
+    ESP_ERROR_CHECK(esp_wifi_stop());                   // Stop WiFi
+    // FIXME: Try this without and with the upcoming instruction
+    // ESP_ERROR_CHECK(esp_wifi_deinit());                 // Optional: Deinitialize WiFi driver (somewhat suggested even if still optional) 
+
+
+    // Destroy the network interface                    // From esp_netif_create_default_wifi_sta() init in the Connect()
+    ESP_LOGI(TAG_WIFI, "    Destroying the network interface");
+    esp_netif_destroy(netifHandler);
+    
+    // Removing handlers and default loop created from esp_event_loop_create_default()
+    ESP_LOGI(TAG_WIFI, "    Removing event loop");
     esp_event_loop_delete_default();
     ESP_LOGI(TAG_WIFI, "    WiFi disconnected successfully");
     return ESP_OK;
