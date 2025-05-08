@@ -75,6 +75,7 @@ void eventButton(uint8_t button, bool status) {
             statusReloadConfigKeypress(button, status);
             break;
         case STATUS_PROFILE:
+            ESP_LOGW(TAG_FSM, "---USER--- Event   button %d, status %d", button, status);           // DEBUG: Remove once done
             statusProfileKeypress(button, status);
             break;
     }
@@ -91,6 +92,7 @@ void eventStatus() {
             statusReloadConfigEvent();
             break;
         case STATUS_PROFILE:
+            ESP_LOGW(TAG_FSM, "---USER--- status %d", statusCurrent);                               // DEBUG: Remove once done
             statusProfileEvent();
             break;
     }
