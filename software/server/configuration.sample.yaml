@@ -23,11 +23,11 @@ netcat test:
   # See samples here to understand how it works
   map:
     a:    # When empty is totally ignored, the key will not be transmitted
-    b:
-    x:
-    y:
-    menu:
-    option:
+    b: b
+    x: x\x0d\x0a
+    y: yY\x0d\x0a
+    menu: \x1bOP        # F1
+    option: \x1bOQ      # F2
     right_top:
     right_bottom:
     dpad_left:
