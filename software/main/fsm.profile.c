@@ -30,7 +30,6 @@ void statusProfileInitProfile(uint8_t number) {
     memcpy(label, configuration.remote, CONFIG_LEN_NAME);
     label[CONFIG_LEN_NAME] = '\0';
     displayTextBackground(0, 16, label, &font8x12, LCD_COLOR_WHITE, LCD_COLOR_BLACK);
-
     displayBox(0, 116, LCD_WIDTH, LCD_HEIGHT, LCD_COLOR_WHITE);
     char type[5];
     switch (configuration.type) {
@@ -54,6 +53,7 @@ void statusProfileInitProfile(uint8_t number) {
             statusProfileInitError(" WIFI  ERROR ",
                                    " CONNECTION  ",
                                    "   FAILED    ");
+            wifiDisconnect();
             return;
         }
         displayTextBackground(10, 55, "C O N N E C T E D", &font8x16, LCD_COLOR_WHITE, LCD_COLOR_BLACK);
@@ -109,6 +109,12 @@ void statusProfileEvent() {
  * USER PROFILE keypress event, return to menu when START/SYSTEM button is pressed
  */
 void statusProfileKeypress(uint8_t button, bool status) {
+    // DEBUG: Am I reaching this one ???
+    ESP_LOGW(TAG_PROFILE, "statusProfileKeypress() Button: %d,  Status: %d", button, status);
+    if (button==B_START) {
+        ESP_LOGW(TAG_PROFILE, "statusProfileKeypress() Status: %d", status);
+    }
+    // DEBUG: END
     if (button==B_START && status==1) {
         ESP_LOGI(TAG_PROFILE, "Closing user profile status, returning to main menu");
         wifiDisconnect();
