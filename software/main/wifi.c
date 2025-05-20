@@ -93,6 +93,8 @@ esp_err_t wifiConnect(const char* ssid, const char* password, char *ip) {
     // Configure and start WiFi
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifiConfiguration));
+    // DEBUG: Here's the error (sometimes the wifi module hangs up)
+    //      - phy_init: saving new calibration data because of checksum failure, mode(0)
     ESP_ERROR_CHECK(esp_wifi_start());
     ESP_LOGI(TAG_WIFI, "    WiFi configuration completed");
     // Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum

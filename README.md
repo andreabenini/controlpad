@@ -44,7 +44,7 @@ appliances
 - (x) ESP32 framework, project and general setup
 - (x) Finite state machine and controller endless loop, status definition
 - (x) Loading/Uploading configurations from USB (dedicated python utility on desktop)
-- (-) Display management, profiles selection, utility menu, hw checkers
+- (-) Display management, profiles selection, wifi connection, utility menu, hw checkers
 - (-) Configuration profiles, yaml parser, networking setup, sending keystrokes to remote
 - ( ) Troubleshooting, test units, network stress tests
 - ( ) Electronics assembly
