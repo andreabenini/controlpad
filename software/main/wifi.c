@@ -91,6 +91,8 @@ esp_err_t wifiConnect(const char* ssid, const char* password, char *ip) {
     strlcpy((char*)wifiConfiguration.sta.password, password, sizeof(wifiConfiguration.sta.password));
 
     // Configure and start WiFi
+    // wifi_country_t wifi_country = {.cc="EU", .schan=1, .nchan=13, .policy=WIFI_COUNTRY_POLICY_AUTO};
+    // ESP_ERROR_CHECK( esp_wifi_set_country(&wifi_country) );
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifiConfiguration));
     // DEBUG: Here's the error (sometimes the wifi module hangs up)
