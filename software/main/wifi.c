@@ -91,13 +91,43 @@ esp_err_t wifiConnect(const char* ssid, const char* password, char *ip) {
     strlcpy((char*)wifiConfiguration.sta.password, password, sizeof(wifiConfiguration.sta.password));
 
     // Configure and start WiFi
-    // wifi_country_t wifi_country = {.cc="EU", .schan=1, .nchan=13, .policy=WIFI_COUNTRY_POLICY_AUTO};
+    // TODO: wifi_country_t wifi_country = {.cc="EU", .schan=1, .nchan=13, .policy=WIFI_COUNTRY_POLICY_AUTO};
     // ESP_ERROR_CHECK( esp_wifi_set_country(&wifi_country) );
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifiConfiguration));
     // DEBUG: Here's the error (sometimes the wifi module hangs up)
     //      - phy_init: saving new calibration data because of checksum failure, mode(0)
     ESP_ERROR_CHECK(esp_wifi_start());
+    
+    // XXX: Testing this setting: set maximum power to avoid problems with C3-Super-Mini-Flaw bug
+    // ESP32-C3 super mini has a broken antenna design. Reducing or changing the Tx-Power to reduce reflections
+    //      (see: https://forum.arduino.cc/t/no-wifi-connect-with-esp32-c3-super-mini/1324046/24)
+    // There are two possible solutions:
+    // - Remove the C3 from breadboard, to be precise: remove Pin21, the one which is close by the xtal 40MHz generator
+    //      C3 might be soldered at 90deg with one pin still connected while other might be moved away from the xtal.
+    //      If you have a decent MCU or an external antenna this won't affect you (hopefully)
+    // - Reduce TX-Power, something like:
+    //      >> WiFi.setTxPower(WIFI_POWER_8_5dBm);                  // WIFI_POWER_8_5dBm = 34,  // 8.5dBm
+    //      >> ESP_ERROR_CHECK(esp_wifi_set_max_tx_power(80));      // Do not use 80, go down below...
+    //      Here's current enum definition:
+    //          typedef enum {
+    //              WIFI_POWER_19_5dBm = 78,// 19.5dBm
+    //              WIFI_POWER_19dBm = 76,// 19dBm
+    //              WIFI_POWER_18_5dBm = 74,// 18.5dBm
+    //              WIFI_POWER_17dBm = 68,// 17dBm
+    //              WIFI_POWER_15dBm = 60,// 15dBm
+    //              WIFI_POWER_13dBm = 52,// 13dBm
+    //              WIFI_POWER_11dBm = 44,// 11dBm
+    //              WIFI_POWER_8_5dBm = 34,// 8.5dBm
+    //              WIFI_POWER_7dBm = 28,// 7dBm
+    //              WIFI_POWER_5dBm = 20,// 5dBm
+    //              WIFI_POWER_2dBm = 8,// 2dBm
+    //              WIFI_POWER_MINUS_1dBm = -4// -1dBm
+    //          } wifi_power_t;
+    //      Or plain simple ESP-IDF libraries as usual, reference:
+    //      https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/network/esp_wifi.html#_CPPv425esp_wifi_set_max_tx_power6int8_t
+    ESP_ERROR_CHECK(esp_wifi_set_max_tx_power(34));
+
     ESP_LOGI(TAG_WIFI, "    WiFi configuration completed");
     // Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
     // number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler()
@@ -106,7 +136,6 @@ esp_err_t wifiConnect(const char* ssid, const char* password, char *ip) {
     /* xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually happened */
     if (bits & WIFI_BIT_CONNECTED) {
         ESP_LOGI(TAG_WIFI, "    Connected to AP, SSID:%s", ssid);
-/* TODO: Reactivate once done with the user profile change status
         esp_netif_t *netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
         if (netif) {
             esp_netif_ip_info_t ip_info;
@@ -114,7 +143,6 @@ esp_err_t wifiConnect(const char* ssid, const char* password, char *ip) {
             sprintf(ip, IPSTR, IP2STR(&ip_info.ip));
         }
         ESP_LOGI(TAG_WIFI, "    Initialization completed");
-*/
         result = ESP_OK;
     } else if (bits & WIFI_BIT_FAIL) {
         ESP_LOGE(TAG_WIFI, "    Failed to connect to SSID:%s", ssid);
