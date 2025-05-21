@@ -126,6 +126,10 @@ esp_err_t wifiConnect(const char* ssid, const char* password, char *ip) {
     //          } wifi_power_t;
     //      Or plain simple ESP-IDF libraries as usual, reference:
     //      https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/network/esp_wifi.html#_CPPv425esp_wifi_set_max_tx_power6int8_t
+    // XXX: Also testing slow tx init with some delays in between
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    ESP_ERROR_CHECK(esp_wifi_set_max_tx_power(8));
+    vTaskDelay(pdMS_TO_TICKS(3000));
     ESP_ERROR_CHECK(esp_wifi_set_max_tx_power(34));
 
     ESP_LOGI(TAG_WIFI, "    WiFi configuration completed");
