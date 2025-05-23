@@ -1,6 +1,7 @@
 #include "wifi.h"
 
 
+bool                eventLoop = false;
 uint8_t             wifiRetries,                    // Connection retries before dropping it off
                     wifiStatus = 0;                 // Generic flag to keep wifi current status
 EventGroupHandle_t  wifiEventGroup;                 // FreeRTOS event group to signal when there's a connection
@@ -29,7 +30,7 @@ void wifiEvent(void* arg, esp_event_base_t eventBase, int32_t eventId, void* eve
         wifiStatus = 0;
     } else if (eventBase == IP_EVENT && eventId == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)eventData;
-        ESP_LOGI(TAG_WIFI, "    Received IP:" IPSTR, IP2STR(&event->ip_info.ip));
+        ESP_LOGI(TAG_WIFI, "    - Received IP " IPSTR, IP2STR(&event->ip_info.ip));
         xEventGroupSetBits(wifiEventGroup, WIFI_BIT_CONNECTED);
         wifiRetries = 0;
         wifiStatus  = 1;
@@ -51,15 +52,19 @@ esp_err_t wifiConnect(const char* ssid, const char* password, char *ip) {
         ESP_LOGW(TAG_WIFI, "WiFi already initialized");
         return ESP_OK;
     }
+    esp_err_t result;
     wifiRetries = 0;
     ESP_LOGI(TAG_WIFI, "Trying to connect to '%s' network", ssid);
     wifiEventGroup = xEventGroupCreate();
     ESP_RETURN_ON_ERROR(esp_netif_init(), TAG_WIFI, "esp_netif_init() Initialization error");
-    esp_err_t result = esp_event_loop_create_default();
-    if (result != ESP_OK) {
-        ESP_LOGE(TAG_WIFI, "    Failed to create the event loop. Error: %s", esp_err_to_name(result));
-        vEventGroupDelete(wifiEventGroup);
-        return result; // Abort further initialization, including Wi-Fi
+    if (!eventLoop) {           // I've tried to do it more than once, then coredumped on disconnect/connect, let's keep it singleton
+        eventLoop = true;
+        result = esp_event_loop_create_default();
+        if (result != ESP_OK) {
+            ESP_LOGE(TAG_WIFI, "    Failed to create the event loop. Error: %s", esp_err_to_name(result));
+            vEventGroupDelete(wifiEventGroup);
+            return result; // Abort further initialization, including Wi-Fi
+        }
     }
     netifHandler = esp_netif_create_default_wifi_sta();                 // Create a network interface. WiFi station mode (client)
     if (netifHandler==NULL) {
@@ -108,37 +113,39 @@ esp_err_t wifiConnect(const char* ssid, const char* password, char *ip) {
     ESP_RETURN_ON_ERROR(esp_wifi_start(), TAG_WIFI, "Cannot start WiFi");
     
     // XXX: Testing this setting: set maximum power to avoid problems with C3-Super-Mini-Flaw bug
-    // ESP32-C3 super mini has a broken antenna design. Reducing or changing the Tx-Power to reduce reflections
-    //      (see: https://forum.arduino.cc/t/no-wifi-connect-with-esp32-c3-super-mini/1324046/24)
-    // There are two possible solutions:
-    // - Remove the C3 from breadboard, to be precise: remove Pin21, the one which is close by the xtal 40MHz generator
-    //      C3 might be soldered at 90deg with one pin still connected while other might be moved away from the xtal.
-    //      If you have a decent MCU or an external antenna this won't affect you (hopefully)
-    // - Reduce TX-Power, something like:
-    //      >> WiFi.setTxPower(WIFI_POWER_8_5dBm);                  // WIFI_POWER_8_5dBm = 34,  // 8.5dBm
-    //      >> ESP_ERROR_CHECK(esp_wifi_set_max_tx_power(80));      // Do not use 80, go down below...
-    //      Here's current enum definition:
-    //          typedef enum {
-    //              WIFI_POWER_19_5dBm = 78,// 19.5dBm
-    //              WIFI_POWER_19dBm = 76,// 19dBm
-    //              WIFI_POWER_18_5dBm = 74,// 18.5dBm
-    //              WIFI_POWER_17dBm = 68,// 17dBm
-    //              WIFI_POWER_15dBm = 60,// 15dBm
-    //              WIFI_POWER_13dBm = 52,// 13dBm
-    //              WIFI_POWER_11dBm = 44,// 11dBm
-    //              WIFI_POWER_8_5dBm = 34,// 8.5dBm
-    //              WIFI_POWER_7dBm = 28,// 7dBm
-    //              WIFI_POWER_5dBm = 20,// 5dBm
-    //              WIFI_POWER_2dBm = 8,// 2dBm
-    //              WIFI_POWER_MINUS_1dBm = -4// -1dBm
-    //          } wifi_power_t;
-    //      Or plain simple ESP-IDF libraries as usual, reference:
-    //      https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/network/esp_wifi.html#_CPPv425esp_wifi_set_max_tx_power6int8_t
-    // XXX: Also testing slow tx init with some delays in between
+    /**
+     ESP32-C3 super mini has a broken antenna design. Reducing or changing the Tx-Power to reduce reflections
+          (see: https://forum.arduino.cc/t/no-wifi-connect-with-esp32-c3-super-mini/1324046/24)
+     There are two possible solutions:
+     - Remove the C3 from breadboard, to be precise: remove Pin21, the one which is close by the xtal 40MHz generator
+          C3 might be soldered at 90deg with one pin still connected while other might be moved away from the xtal.
+          If you have a decent MCU or an external antenna this won't affect you (hopefully)
+     - Reduce TX-Power, something like:
+          >> WiFi.setTxPower(WIFI_POWER_8_5dBm);                  // WIFI_POWER_8_5dBm = 34,  // 8.5dBm
+          >> ESP_ERROR_CHECK(esp_wifi_set_max_tx_power(80));      // Do not use 80, go down below...
+          Here's current enum definition:
+              typedef enum {
+                  WIFI_POWER_19_5dBm = 78,// 19.5dBm
+                  WIFI_POWER_19dBm = 76,// 19dBm
+                  WIFI_POWER_18_5dBm = 74,// 18.5dBm
+                  WIFI_POWER_17dBm = 68,// 17dBm
+                  WIFI_POWER_15dBm = 60,// 15dBm
+                  WIFI_POWER_13dBm = 52,// 13dBm
+                  WIFI_POWER_11dBm = 44,// 11dBm
+                  WIFI_POWER_8_5dBm = 34,// 8.5dBm
+                  WIFI_POWER_7dBm = 28,// 7dBm
+                  WIFI_POWER_5dBm = 20,// 5dBm
+                  WIFI_POWER_2dBm = 8,// 2dBm
+                  WIFI_POWER_MINUS_1dBm = -4// -1dBm
+              } wifi_power_t;
+          Or plain simple ESP-IDF libraries as usual, reference:
+          https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/network/esp_wifi.html#_CPPv425esp_wifi_set_max_tx_power6int8_t
+     XXX: Also testing slow tx init with some delays in between
+     */
     ESP_LOGI(TAG_WIFI, "    - Power regulations (8..34)");
-    vTaskDelay(pdMS_TO_TICKS(3000));
+    vTaskDelay(pdMS_TO_TICKS(50));
     ESP_RETURN_ON_ERROR(esp_wifi_set_max_tx_power(8), TAG_WIFI, "Cannot set WiFi max power to 8");
-    vTaskDelay(pdMS_TO_TICKS(3000));
+    vTaskDelay(pdMS_TO_TICKS(5000));
     ESP_RETURN_ON_ERROR(esp_wifi_set_max_tx_power(34), TAG_WIFI, "Cannot set WiFi max power to 34");
 
     ESP_LOGI(TAG_WIFI, "    - Configuration completed");
@@ -176,8 +183,7 @@ esp_err_t wifiDisconnect() {
     }
     wifiStatus = 0;
     ESP_LOGI(TAG_WIFI, "Disconnecting from WiFi");
-
-    ESP_LOGI(TAG_WIFI, "    Unregistering associated events");
+    ESP_LOGI(TAG_WIFI, "    - Unregistering associated events");
     esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID,    &instanceAnyID);
     esp_event_handler_instance_unregister(IP_EVENT,   IP_EVENT_STA_GOT_IP, &instanceGotIP);
 
@@ -185,15 +191,16 @@ esp_err_t wifiDisconnect() {
     esp_wifi_disconnect();
     ESP_RETURN_ON_ERROR(esp_wifi_stop(), TAG_WIFI, "Cannot stop WiFi network interface");           // Stop WiFi
     // FIXME: Try this without and with the upcoming instruction
-    // ESP_ERROR_CHECK(esp_wifi_deinit());                 // Optional: Deinitialize WiFi driver (somewhat suggested even if still optional) 
+    ESP_RETURN_ON_ERROR(esp_wifi_deinit(), TAG_WIFI, "Cannot deinit WiFi network interface");       // Optional: Deinitialize WiFi driver (suggested even if optional)
 
     // Destroy the network interface                    // From esp_netif_create_default_wifi_sta() init in the Connect()
-    ESP_LOGI(TAG_WIFI, "    Destroying the network interface");
+    ESP_LOGI(TAG_WIFI, "    - Destroying the network interface");
     esp_netif_destroy(netifHandler);
     
     // Removing handlers and default loop created from esp_event_loop_create_default()
-    ESP_LOGI(TAG_WIFI, "    Removing event loop");
-    esp_event_loop_delete_default();
-    ESP_LOGI(TAG_WIFI, "    WiFi disconnected successfully");
+    // TODO: Trying to init it just once
+    // ESP_LOGI(TAG_WIFI, "    - Removing event loop");
+    // esp_event_loop_delete_default();
+    ESP_LOGI(TAG_WIFI, "    - Disconnected successfully");
     return ESP_OK;
 } /**/
