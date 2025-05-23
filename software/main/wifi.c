@@ -107,8 +107,6 @@ esp_err_t wifiConnect(const char* ssid, const char* password, char *ip) {
     ESP_RETURN_ON_ERROR(esp_wifi_set_mode(WIFI_MODE_STA), TAG_WIFI, "esp_wifi_set_mode() Cannot set WiFi station mode");
     ESP_LOGI(TAG_WIFI, "    - Setting configuration");
     ESP_RETURN_ON_ERROR(esp_wifi_set_config(WIFI_IF_STA, &wifiConfiguration), TAG_WIFI, "esp_wifi_set_config() Cannot setup wifi configuration");
-    // DEBUG: Here's the error (sometimes the wifi module hangs up)
-    //      - phy_init: saving new calibration data because of checksum failure, mode(0)
     ESP_LOGI(TAG_WIFI, "    - Starting");
     ESP_RETURN_ON_ERROR(esp_wifi_start(), TAG_WIFI, "Cannot start WiFi");
     
@@ -190,7 +188,6 @@ esp_err_t wifiDisconnect() {
     // Stop Wifi
     esp_wifi_disconnect();
     ESP_RETURN_ON_ERROR(esp_wifi_stop(), TAG_WIFI, "Cannot stop WiFi network interface");           // Stop WiFi
-    // FIXME: Try this without and with the upcoming instruction
     ESP_RETURN_ON_ERROR(esp_wifi_deinit(), TAG_WIFI, "Cannot deinit WiFi network interface");       // Optional: Deinitialize WiFi driver (suggested even if optional)
 
     // Destroy the network interface                    // From esp_netif_create_default_wifi_sta() init in the Connect()
@@ -198,9 +195,6 @@ esp_err_t wifiDisconnect() {
     esp_netif_destroy(netifHandler);
     
     // Removing handlers and default loop created from esp_event_loop_create_default()
-    // TODO: Trying to init it just once
-    // ESP_LOGI(TAG_WIFI, "    - Removing event loop");
-    // esp_event_loop_delete_default();
     ESP_LOGI(TAG_WIFI, "    - Disconnected successfully");
     return ESP_OK;
 } /**/
