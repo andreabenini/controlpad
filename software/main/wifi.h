@@ -10,6 +10,8 @@
 #include <esp_event.h>                                          // IWYU pragma: keep
 #include <esp_log.h>
 #include <esp_err.h>
+#include <esp_check.h>
+
 
 #define TAG_WIFI                        "Wireless"
 #define WIFI_RETRY_MAXIMUM              5                       // WiFi maximum reconnections before dropping it off

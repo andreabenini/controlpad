@@ -54,24 +54,26 @@ esp_err_t wifiConnect(const char* ssid, const char* password, char *ip) {
     wifiRetries = 0;
     ESP_LOGI(TAG_WIFI, "Trying to connect to '%s' network", ssid);
     wifiEventGroup = xEventGroupCreate();
-    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_RETURN_ON_ERROR(esp_netif_init(), TAG_WIFI, "esp_netif_init() Initialization error");
     esp_err_t result = esp_event_loop_create_default();
     if (result != ESP_OK) {
         ESP_LOGE(TAG_WIFI, "    Failed to create the event loop. Error: %s", esp_err_to_name(result));
+        vEventGroupDelete(wifiEventGroup);
         return result; // Abort further initialization, including Wi-Fi
     }
     netifHandler = esp_netif_create_default_wifi_sta();                 // Create a network interface. WiFi station mode (client)
     if (netifHandler==NULL) {
         ESP_LOGE(TAG_WIFI, "    Failed to create default WiFi network interface");
+        vEventGroupDelete(wifiEventGroup);
         return ESP_ERR_WIFI_STATE;
     }
 
     // Init wifi and register event handlers
     wifi_init_config_t config = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&config));
+    ESP_RETURN_ON_ERROR(esp_wifi_init(&config), TAG_WIFI, "esp_wifi_init() WiFi init error");
     // ... Register event handlers
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID,    &wifiEvent, NULL, &instanceAnyID));
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,   IP_EVENT_STA_GOT_IP, &wifiEvent, NULL, &instanceGotIP));
+    ESP_RETURN_ON_ERROR(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID,    &wifiEvent, NULL, &instanceAnyID), TAG_WIFI, "Cannot esp_event_handler_instance_register() on ANY_EVENT");
+    ESP_RETURN_ON_ERROR(esp_event_handler_instance_register(IP_EVENT,   IP_EVENT_STA_GOT_IP, &wifiEvent, NULL, &instanceGotIP), TAG_WIFI, "Cannot esp_event_handler_instance_register() on GOT_IP");
     
     // Configure WiFi
     wifi_config_t wifiConfiguration = {
@@ -92,12 +94,12 @@ esp_err_t wifiConnect(const char* ssid, const char* password, char *ip) {
 
     // Configure and start WiFi
     // TODO: wifi_country_t wifi_country = {.cc="EU", .schan=1, .nchan=13, .policy=WIFI_COUNTRY_POLICY_AUTO};
-    // ESP_ERROR_CHECK( esp_wifi_set_country(&wifi_country) );
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifiConfiguration));
+    // ESP_RETURN_ON_ERROR( esp_wifi_set_country(&wifi_country) );
+    ESP_RETURN_ON_ERROR(esp_wifi_set_mode(WIFI_MODE_STA), TAG_WIFI, "esp_wifi_set_mode() Cannot set WiFi station mode");
+    ESP_RETURN_ON_ERROR(esp_wifi_set_config(WIFI_IF_STA, &wifiConfiguration), TAG_WIFI, "esp_wifi_set_config() Cannot setup wifi configuration");
     // DEBUG: Here's the error (sometimes the wifi module hangs up)
     //      - phy_init: saving new calibration data because of checksum failure, mode(0)
-    ESP_ERROR_CHECK(esp_wifi_start());
+    ESP_RETURN_ON_ERROR(esp_wifi_start(), TAG_WIFI, "Cannot start WiFi");
     
     // XXX: Testing this setting: set maximum power to avoid problems with C3-Super-Mini-Flaw bug
     // ESP32-C3 super mini has a broken antenna design. Reducing or changing the Tx-Power to reduce reflections
@@ -128,9 +130,9 @@ esp_err_t wifiConnect(const char* ssid, const char* password, char *ip) {
     //      https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/network/esp_wifi.html#_CPPv425esp_wifi_set_max_tx_power6int8_t
     // XXX: Also testing slow tx init with some delays in between
     vTaskDelay(pdMS_TO_TICKS(1000));
-    ESP_ERROR_CHECK(esp_wifi_set_max_tx_power(8));
+    ESP_RETURN_ON_ERROR(esp_wifi_set_max_tx_power(8), TAG_WIFI, "Cannot set WiFi max power to 8");
     vTaskDelay(pdMS_TO_TICKS(3000));
-    ESP_ERROR_CHECK(esp_wifi_set_max_tx_power(34));
+    ESP_RETURN_ON_ERROR(esp_wifi_set_max_tx_power(34), TAG_WIFI, "Cannot set WiFi max power to 34");
 
     ESP_LOGI(TAG_WIFI, "    WiFi configuration completed");
     // Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
@@ -143,7 +145,7 @@ esp_err_t wifiConnect(const char* ssid, const char* password, char *ip) {
         esp_netif_t *netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
         if (netif) {
             esp_netif_ip_info_t ip_info;
-            ESP_ERROR_CHECK(esp_netif_get_ip_info(netif, &ip_info));
+            ESP_RETURN_ON_ERROR(esp_netif_get_ip_info(netif, &ip_info), TAG_WIFI, "Cannot get IP information from the interface");
             sprintf(ip, IPSTR, IP2STR(&ip_info.ip));
         }
         ESP_LOGI(TAG_WIFI, "    Initialization completed");
@@ -174,10 +176,9 @@ esp_err_t wifiDisconnect() {
 
     // Stop Wifi
     esp_wifi_disconnect();
-    ESP_ERROR_CHECK(esp_wifi_stop());                   // Stop WiFi
+    ESP_RETURN_ON_ERROR(esp_wifi_stop(), TAG_WIFI, "Cannot stop WiFi network interface");           // Stop WiFi
     // FIXME: Try this without and with the upcoming instruction
     // ESP_ERROR_CHECK(esp_wifi_deinit());                 // Optional: Deinitialize WiFi driver (somewhat suggested even if still optional) 
-
 
     // Destroy the network interface                    // From esp_netif_create_default_wifi_sta() init in the Connect()
     ESP_LOGI(TAG_WIFI, "    Destroying the network interface");
