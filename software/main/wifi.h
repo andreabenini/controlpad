@@ -23,7 +23,8 @@
 #define WIFI_BIT_FAIL                   BIT1
 
 // Functions
-void      wifiEvent(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
+void      wifiEventHandler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
+esp_err_t wifiInit();
 esp_err_t wifiConnect(const char* ssid, const char* password, char *ip);
 esp_err_t wifiDisconnect();
 
