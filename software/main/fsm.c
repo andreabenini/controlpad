@@ -111,10 +111,6 @@ void statusMenuInit() {
     memcpy(statusMenu.connections[statusMenu.connectionsNumber], MENU_CONFIGURATION, strlen(MENU_CONFIGURATION));
     statusMenu.connections[statusMenu.connectionsNumber][strlen(MENU_CONFIGURATION)] = '\0';
     statusMenu.connectionsNumber++;
-    ESP_LOGI(TAG_FSM, "Menu Items");
-    for (uint8_t i=0; i<statusMenu.connectionsNumber; i++) {
-        ESP_LOGI(TAG_FSM, "    - %s", statusMenu.connections[i]);
-    }
     // Display some context
     displayBackground(LCD_COLOR_WHITE);
     displayTextBackground(18, 0, "SELECT  PROFILE", &font8x12, LCD_COLOR_RED, LCD_COLOR_WHITE);
