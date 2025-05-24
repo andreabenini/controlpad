@@ -1,4 +1,5 @@
-# controlpad - ESP32 controller for small robots and general appliances
+# controlpad
+## ESP32 controller for small robots and general appliances
 <div align="center">
   <picture>
     <img src="logo.png" height="150" alt="Linux Logo">
@@ -13,7 +14,7 @@ but it still has to be marked as effective alpha version.
 
 
 ### General Features
-- PS5 button layout (same size too, effectively with a PS5 shell)  
+- PS5 button layout (same size too, effectively a new device in a PS5 shell)  
   16 buttons and two analog joysticks. ESP32C3 core and I2C I/O Expander
 - Multi host profile selection to manage multiple appliances
 - Embedded display with status information, profile selection, diagnostics
@@ -46,7 +47,7 @@ appliances
 - (x) Loading/Uploading configurations from USB (dedicated python utility on desktop)
 - (-) Display management, profiles selection, wifi connection, utility menu, hw checkers
 - (-) Configuration profiles, yaml parser, networking setup, sending keystrokes to remote
-- ( ) Troubleshooting, test units, network stress tests
+- (-) Troubleshooting, test units, network stress tests
 - ( ) Electronics assembly
 - ( ) Final HW assembly. 3D printed internals, electronics, I/O devices
 - ( ) Final tests on firmware v1.0 and overall tests with different testbeds (PC,
