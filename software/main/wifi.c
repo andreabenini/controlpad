@@ -1,11 +1,8 @@
 #include "wifi.h"
 
-
-bool                eventLoop = false;
 uint8_t             wifiRetries,                    // Connection retries before dropping it off
                     wifiStatus = 0;                 // Generic flag to keep wifi current status
-EventGroupHandle_t  wifiEventGroup;                 // FreeRTOS event group to signal when there's a connection
-esp_netif_t         *netifHandler = NULL;           // Global variable to store the netif pointer
+EventGroupHandle_t  wifiEventGroup = NULL;          // FreeRTOS event group to signal when there's a connection
 esp_event_handler_instance_t instanceAnyID;         // Managed event handlers for esp_event_handler_instance_register()
 esp_event_handler_instance_t instanceGotIP;
 
@@ -14,29 +11,56 @@ esp_event_handler_instance_t instanceGotIP;
  * @brief WiFi Event handler
  * @see   Used from wifiConnect() only. Do NOT use it directly
  */
-void wifiEvent(void* arg, esp_event_base_t eventBase, int32_t eventId, void* eventData) {
+void wifiEventHandler(void* arg, esp_event_base_t eventBase, int32_t eventId, void* eventData) {
     if (eventBase == WIFI_EVENT && eventId == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
     } else if (eventBase == WIFI_EVENT && eventId == WIFI_EVENT_STA_DISCONNECTED) {
         if (wifiRetries < WIFI_RETRY_MAXIMUM) {
             ESP_LOGW(TAG_WIFI, "Retrying WiFi connection (%d) attempt", wifiRetries+1);
-            vTaskDelay(WIFI_RETRY_TIMEOUT / portTICK_PERIOD_MS);
+            xEventGroupClearBits(wifiEventGroup, WIFI_BIT_CONNECTED); // Clear connected bit
             esp_wifi_connect();
+            vTaskDelay(WIFI_RETRY_TIMEOUT / portTICK_PERIOD_MS);
             wifiRetries++;
         } else {
             xEventGroupSetBits(wifiEventGroup, WIFI_BIT_FAIL);
             ESP_LOGE(TAG_WIFI, "AP connection failed, aborting network connection");
+            esp_wifi_disconnect();
         }
-        wifiStatus = 0;
     } else if (eventBase == IP_EVENT && eventId == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)eventData;
         ESP_LOGI(TAG_WIFI, "    - Received IP " IPSTR, IP2STR(&event->ip_info.ip));
-        xEventGroupSetBits(wifiEventGroup, WIFI_BIT_CONNECTED);
+        xEventGroupSetBits(wifiEventGroup,   WIFI_BIT_CONNECTED);
+        xEventGroupClearBits(wifiEventGroup, WIFI_BIT_FAIL);        // Clear connected bit
         wifiRetries = 0;
-        wifiStatus  = 1;
     }
 } /**/
 
+
+/**
+ * 
+ */
+esp_err_t wifiInit() {
+    if (wifiEventGroup != NULL) {
+        ESP_LOGI(TAG_WIFI, "    - WiFi already initalized");
+        return ESP_OK;
+    }
+    ESP_LOGI(TAG_WIFI, "    - Network init");
+    ESP_RETURN_ON_ERROR(esp_netif_init(),                TAG_WIFI, "esp_netif_init() Initialization error");
+    ESP_RETURN_ON_ERROR(esp_event_loop_create_default(), TAG_WIFI, "Cannot create the event loop");
+    esp_netif_t *netifHandler;                                          // netif pointer
+    netifHandler = esp_netif_create_default_wifi_sta();                 // Create a network interface. WiFi station mode (client)
+    if (netifHandler==NULL) {
+        ESP_LOGE(TAG_WIFI, "    Failed to create default WiFi network interface");
+        return ESP_ERR_WIFI_STATE;
+    }
+    wifiEventGroup = xEventGroupCreate();
+    // ... Register event handlers
+    ESP_LOGI(TAG_WIFI, "    - registering handlers: ESP_EVENT_ANY_ID");
+    ESP_RETURN_ON_ERROR(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID,    &wifiEventHandler, NULL, &instanceAnyID), TAG_WIFI, "Cannot esp_event_handler_instance_register() on ANY_EVENT");
+    ESP_LOGI(TAG_WIFI, "    - registering handlers: IP_EVENT_STA_GOT_IP");
+    ESP_RETURN_ON_ERROR(esp_event_handler_instance_register(IP_EVENT,   IP_EVENT_STA_GOT_IP, &wifiEventHandler, NULL, &instanceGotIP), TAG_WIFI, "Cannot esp_event_handler_instance_register() on GOT_IP");
+    return ESP_OK;
+} /**/
 
 /**
  * @brief Initialize and connect to WiFi network
@@ -55,34 +79,10 @@ esp_err_t wifiConnect(const char* ssid, const char* password, char *ip) {
     esp_err_t result;
     wifiRetries = 0;
     ESP_LOGI(TAG_WIFI, "Trying to connect to '%s' network", ssid);
-    wifiEventGroup = xEventGroupCreate();
-    ESP_RETURN_ON_ERROR(esp_netif_init(), TAG_WIFI, "esp_netif_init() Initialization error");
-    if (!eventLoop) {           // I've tried to do it more than once, then coredumped on disconnect/connect, let's keep it singleton
-        eventLoop = true;
-        result = esp_event_loop_create_default();
-        if (result != ESP_OK) {
-            ESP_LOGE(TAG_WIFI, "    Failed to create the event loop. Error: %s", esp_err_to_name(result));
-            vEventGroupDelete(wifiEventGroup);
-            return result; // Abort further initialization, including Wi-Fi
-        }
-    }
-    netifHandler = esp_netif_create_default_wifi_sta();                 // Create a network interface. WiFi station mode (client)
-    if (netifHandler==NULL) {
-        ESP_LOGE(TAG_WIFI, "    Failed to create default WiFi network interface");
-        vEventGroupDelete(wifiEventGroup);
-        return ESP_ERR_WIFI_STATE;
-    }
-
+    ESP_RETURN_ON_ERROR(wifiInit(), TAG_WIFI, "Cannot initialize the WiFi stack");
     // Init wifi and register event handlers
     wifi_init_config_t config = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_LOGI(TAG_WIFI, "    - init");
     ESP_RETURN_ON_ERROR(esp_wifi_init(&config), TAG_WIFI, "esp_wifi_init() WiFi init error");
-    // ... Register event handlers
-    ESP_LOGI(TAG_WIFI, "    - registering handlers: ESP_EVENT_ANY_ID");
-    ESP_RETURN_ON_ERROR(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID,    &wifiEvent, NULL, &instanceAnyID), TAG_WIFI, "Cannot esp_event_handler_instance_register() on ANY_EVENT");
-    ESP_LOGI(TAG_WIFI, "    - registering handlers: IP_EVENT_STA_GOT_IP");
-    ESP_RETURN_ON_ERROR(esp_event_handler_instance_register(IP_EVENT,   IP_EVENT_STA_GOT_IP, &wifiEvent, NULL, &instanceGotIP), TAG_WIFI, "Cannot esp_event_handler_instance_register() on GOT_IP");
-    
     // Configure WiFi
     wifi_config_t wifiConfiguration = {
         .sta = {
@@ -96,7 +96,7 @@ esp_err_t wifiConnect(const char* ssid, const char* password, char *ip) {
             .threshold.authmode = WIFI_AUTH_WPA2_PSK,           // WiFi, WPA2 with preshared key (default)
         },
     };
-    // Copy SSID and password to the config
+    // Copy SSID and password to the config, instead of direct assign in the [wifi_config_t] struct I prefer this to avoid casting
     strlcpy((char*)wifiConfiguration.sta.ssid,     ssid,     sizeof(wifiConfiguration.sta.ssid));
     strlcpy((char*)wifiConfiguration.sta.password, password, sizeof(wifiConfiguration.sta.password));
 
@@ -109,7 +109,7 @@ esp_err_t wifiConnect(const char* ssid, const char* password, char *ip) {
     ESP_RETURN_ON_ERROR(esp_wifi_set_config(WIFI_IF_STA, &wifiConfiguration), TAG_WIFI, "esp_wifi_set_config() Cannot setup wifi configuration");
     ESP_LOGI(TAG_WIFI, "    - Starting");
     ESP_RETURN_ON_ERROR(esp_wifi_start(), TAG_WIFI, "Cannot start WiFi");
-    
+
     // XXX: Testing this setting: set maximum power to avoid problems with C3-Super-Mini-Flaw bug
     /**
      ESP32-C3 super mini has a broken antenna design. Reducing or changing the Tx-Power to reduce reflections
@@ -150,6 +150,7 @@ esp_err_t wifiConnect(const char* ssid, const char* password, char *ip) {
     // Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
     // number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler()
     EventBits_t bits = xEventGroupWaitBits(wifiEventGroup, WIFI_BIT_CONNECTED|WIFI_BIT_FAIL, pdFALSE, pdFALSE, portMAX_DELAY);
+
     strcpy(ip, "");
     /* xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually happened */
     if (bits & WIFI_BIT_CONNECTED) {
@@ -161,6 +162,7 @@ esp_err_t wifiConnect(const char* ssid, const char* password, char *ip) {
             sprintf(ip, IPSTR, IP2STR(&ip_info.ip));
         }
         ESP_LOGI(TAG_WIFI, "    - Initialization completed (%s)", ip);
+        wifiStatus  = 1;
         result = ESP_OK;
     } else if (bits & WIFI_BIT_FAIL) {
         ESP_LOGE(TAG_WIFI, "    - Failed to connect to SSID:%s", ssid);
@@ -169,7 +171,6 @@ esp_err_t wifiConnect(const char* ssid, const char* password, char *ip) {
         ESP_LOGE(TAG_WIFI, "    - Unknown event: %u", (unsigned int) bits);
         result = ESP_ERR_INVALID_STATE;
     }
-    vEventGroupDelete(wifiEventGroup);
     return result;
 } /**/
 
@@ -179,20 +180,13 @@ esp_err_t wifiDisconnect() {
         ESP_LOGW(TAG_WIFI, "WiFi not initialized, disconnection not needed");
         return ESP_OK;
     }
+    // Stop Wifi
     wifiStatus = 0;
     ESP_LOGI(TAG_WIFI, "Disconnecting from WiFi");
-    ESP_LOGI(TAG_WIFI, "    - Unregistering associated events");
-    esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID,    &instanceAnyID);
-    esp_event_handler_instance_unregister(IP_EVENT,   IP_EVENT_STA_GOT_IP, &instanceGotIP);
-
-    // Stop Wifi
-    esp_wifi_disconnect();
-    ESP_RETURN_ON_ERROR(esp_wifi_stop(), TAG_WIFI, "Cannot stop WiFi network interface");           // Stop WiFi
-    ESP_RETURN_ON_ERROR(esp_wifi_deinit(), TAG_WIFI, "Cannot deinit WiFi network interface");       // Optional: Deinitialize WiFi driver (suggested even if optional)
-
-    // Destroy the network interface                    // From esp_netif_create_default_wifi_sta() init in the Connect()
-    ESP_LOGI(TAG_WIFI, "    - Destroying the network interface");
-    esp_netif_destroy(netifHandler);
+    ESP_RETURN_ON_ERROR(esp_wifi_disconnect(),  TAG_WIFI, "Cannot disconnect WiFi");                // Network stack disconnection
+    ESP_RETURN_ON_ERROR(esp_wifi_stop(),        TAG_WIFI, "Cannot stop WiFi network interface");    // Stop WiFi
+    ESP_RETURN_ON_ERROR(esp_wifi_deinit(),      TAG_WIFI, "Cannot deinit WiFi network interface");  // Optional: Deinitialize WiFi driver (suggested even if optional)
+    xEventGroupClearBits(wifiEventGroup, WIFI_BIT_CONNECTED | WIFI_BIT_FAIL);                       // Clear status bits
     
     // Removing handlers and default loop created from esp_event_loop_create_default()
     ESP_LOGI(TAG_WIFI, "    - Disconnected successfully");
