@@ -141,6 +141,10 @@ esp_err_t configurationList(char names[][CONFIG_LEN_NAME], uint8_t *count) {
 } /**/
 
 
+/**
+ * @return (ESP_OK)  on success
+ * @return (!ESP_OK) on failure
+ */
 esp_err_t configurationLoad(profiles *profile, uint8_t profileNumber) {
     // Initialize NVS
     nvs_handle_t nvsHandle;
