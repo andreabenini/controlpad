@@ -9,21 +9,6 @@
 
 
 
-// XXX: Free GPIO10 for SPI display
-// esp_err_t keyboardInit() {
-//     ESP_LOGI(TAG_MAINLOOP, "Keyboard Init  gpio_config()");
-//     // Set up the GPIO for the input button with a pull-up resistor
-//     gpio_config_t io_conf = {
-//         .pin_bit_mask = (1ULL << GPIO_BUTTON_START),        // GPIO pin bit mask
-//         .mode         = GPIO_MODE_INPUT,                    // Set as input mode
-//         .pull_up_en   = GPIO_PULLUP_ENABLE,                 // Enable pull-up resistor
-//         .pull_down_en = GPIO_PULLDOWN_DISABLE,              // Disable pull-down resistor
-//         .intr_type    = GPIO_INTR_DISABLE                   // No interrupts
-//     };
-//     return gpio_config(&io_conf);
-// } /**/
-
-
 /**
  * I2C bus master initialization
  */
