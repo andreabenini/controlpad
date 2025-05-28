@@ -170,7 +170,9 @@ void taskMainLoop(void *pvParameter) {
          * To avoid a task watchdog timeout, adding a delay here. When you replace the way you process the data,
          * usually you don't need this delay (as this task will block for a while).
          */
+        ESP_LOGI(TAG_MAINLOOP, ".");    // DEBUG:
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);        // Adding it to avoid task's watchdog timeout (see note above)
+        ESP_LOGI(TAG_MAINLOOP, "+");    // DEBUG:
         // Non-blocking check for item in the queue from Task2
         receivedQueue = xQueueReceive(
                     queueMessage,                       // The queue to receive from
