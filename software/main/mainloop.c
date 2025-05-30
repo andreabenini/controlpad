@@ -180,7 +180,7 @@ void taskMainLoop(void *pvParameter) {
                     0                                   // Don't wait (non-blocking)
                 );
         if (receivedQueue == pdTRUE) {
-            statusChange(STATUS_RELOADCONFIG);
+            statusChange(STATUS_CONFIGURATION);
         }
         vTaskDelay(pdMS_TO_TICKS(TIME_POLL_DELAY));     // POLL_DELAY between reads (as .h define)
     }
