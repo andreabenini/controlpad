@@ -22,6 +22,8 @@
 #define TYPE_TCP                    0
 #define TYPE_UDP                    1
 #define TYPE_HTTP                   2
+#define TYPE_BT                     3
+#define TYPE_BTLE                   4
 
 
 typedef struct {
