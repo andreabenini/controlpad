@@ -41,6 +41,6 @@ esp_err_t configurationInit();
 esp_err_t configurationList(char names[][CONFIG_LEN_NAME], uint8_t *count);
 esp_err_t configurationClear();
 esp_err_t configurationSave(const profiles *profileArray, uint8_t sizeArray);
-esp_err_t configurationLoad(profiles *profile, uint8_t profileNumber);
+esp_err_t configurationLoad(profiles* profile, uint8_t profileNumber);
 
 #endif

@@ -142,10 +142,12 @@ esp_err_t configurationList(char names[][CONFIG_LEN_NAME], uint8_t *count) {
 
 
 /**
+ * @param profile       (profiles *) The loaded profile [output]
+ * @param profileNumber (uint8_t)    The profile to load [input]
  * @return (ESP_OK)  on success
  * @return (!ESP_OK) on failure
  */
-esp_err_t configurationLoad(profiles *profile, uint8_t profileNumber) {
+esp_err_t configurationLoad(profiles* profile, uint8_t profileNumber) {
     // Initialize NVS
     nvs_handle_t nvsHandle;
     esp_err_t    result = nvs_open(STORAGE_NAMESPACE, NVS_READONLY, &nvsHandle);
