@@ -99,7 +99,7 @@ void taskMainLoop(void *pvParameter) {
 
     // [[LOOP]] // Read controller status, endless loop for the task
     uint8_t gpioA_data, gpioB_data;
-    if (configurationInit() != ESP_OK) {
+    if (configurationInitialize() != ESP_OK) {
         ESP_LOGE(TAG_MAINLOOP, "Failed to load configuration from the memory");
         i2c_master_bus_rm_device(handleDevice);
         i2c_del_master_bus(handleBus);
@@ -163,6 +163,7 @@ void taskMainLoop(void *pvParameter) {
         }
 
         // Read button functions and trigger events
+        ESP_LOGI(TAG_MAINLOOP, " .");    // DEBUG:
         buttonRead(gpioA_data, gpioB_data);             // Read buttons and raise events, if any
         eventStatus();                                  // Raise event to report overall system state
         /**
@@ -170,9 +171,7 @@ void taskMainLoop(void *pvParameter) {
          * To avoid a task watchdog timeout, adding a delay here. When you replace the way you process the data,
          * usually you don't need this delay (as this task will block for a while).
          */
-        // ESP_LOGI(TAG_MAINLOOP, ".");    // DEBUG:
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);        // Adding it to avoid task's watchdog timeout (see note above)
-        // ESP_LOGI(TAG_MAINLOOP, "+");    // DEBUG:
+        // FIXME: ulTaskNotifyTake(pdTRUE, portMAX_DELAY);        // Adding it to avoid task's watchdog timeout (see note above)
         // Non-blocking check for item in the queue from Task2
         receivedQueue = xQueueReceive(
                     queueMessage,                       // The queue to receive from
@@ -183,6 +182,7 @@ void taskMainLoop(void *pvParameter) {
             statusChange(STATUS_CONFIGURATION);
         }
         vTaskDelay(pdMS_TO_TICKS(TIME_POLL_DELAY));     // POLL_DELAY between reads (as .h define)
+        ESP_LOGI(TAG_MAINLOOP, "+.+");    // DEBUG:
     }
     // Clean up
     // TODO: Add these twos in every exit condition or rearrange exit cleanly
