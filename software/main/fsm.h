@@ -10,39 +10,39 @@
 
 #define TAG_FSM                 "fsm"
 
-#define STATUS_MENU             0
-#define STATUS_SYSTEM           1
-#define STATUS_PROFILE          2
-#define STATUS_RELOADCONFIG     3
-
-#define MENU_UP                 keyboard.button[B_MENU_UP].stateCurrent
-#define MENU_DOWN               keyboard.button[B_MENU_DOWN].stateCurrent
-#define MENU_CONFIRM            keyboard.button[B_MENU_CONFIRM].stateCurrent
-#define MENU_CANCEL             keyboard.button[B_MENU_CANCEL].stateCurrent
-
 #define MENU_CONFIGURATION  "< CONFIGURATION >"
 
 
+typedef enum {
+    STATUS_MENU,
+    STATUS_SYSTEM,
+    STATUS_PROFILE,
+    STATUS_CONFIGURATION
+} statusType;
+#define STATUS_TYPE_ELEMENTS    4
+
+typedef void (*method)(void* self);
+typedef void (*methodStatus)(void* self, uint8_t button, bool status);
+
+typedef struct {
+    statusType      type;
+    method          init;
+    method          eventStatus;
+    methodStatus    eventButton;
+} statusObject;
+
+
 esp_err_t statusInit();
-void      statusChange(uint8_t mode);
+void      statusChange(statusType mode);
 
 /**
  * FSM object properties
  */
-// Main Menu (Profile Selection)
-void statusMenuInit();
-void statusMenuShow();
-void statusMenuEvent();
-void statusMenuKeypress(uint8_t button, bool status);
 // Configuration Menu (System Setup)
 void statusSystemInit();
 void statusSystemShow();
 void statusSystemEvent();
 void statusSystemKeypress(uint8_t button, bool status);
-// Reload config (from remote)
-void statusReloadConfigInit();
-void statusReloadConfigEvent();
-void statusReloadConfigKeypress(uint8_t button, bool status);
 
 
 void eventButton(uint8_t button, bool status);
