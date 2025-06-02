@@ -12,7 +12,18 @@
 #include <esp_err.h>
 #include <esp_check.h>
 
+// Network
+#include "lwip/err.h"
+#include "lwip/sockets.h"
+#include "lwip/sys.h"
+#include <lwip/netdb.h>
 
+
+// Program defines
+#include "configuration.h"
+
+
+// Header defines
 #define TAG_WIFI                        "Wireless"
 #define WIFI_RETRY_MAXIMUM              5                       // WiFi maximum reconnections before dropping it off
 #define WIFI_RETRY_TIMEOUT              500                     // Delay between two retries (in ms)
@@ -22,11 +33,16 @@
 #define WIFI_BIT_CONNECTED              BIT0
 #define WIFI_BIT_FAIL                   BIT1
 
+#define TCP_RETRY_MAXIMUM               5                       // TCP connect() max retries
+
+
 // Functions
 void      wifiEventHandler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
 esp_err_t wifiInit();
 esp_err_t wifiConnect(const char* ssid, const char* password, char *ip);
 esp_err_t wifiDisconnect();
 
+int  tcpSocket(char* remoteAddress);
+void tcpDataSend(int socket, char *data);
 
 #endif

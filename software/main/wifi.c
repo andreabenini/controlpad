@@ -192,3 +192,98 @@ esp_err_t wifiDisconnect() {
     ESP_LOGI(TAG_WIFI, "    - Disconnected successfully");
     return ESP_OK;
 } /**/
+
+
+int tcpSocket(char* remoteAddress) {
+    // split adress and port from a generic [remoteAddress] string (ie: "192.168.0.1:9100")
+    char remoteHost[CONFIG_LEN_REMOTE];
+    int  remotePort;
+    memcpy(remoteHost, remoteAddress, CONFIG_LEN_REMOTE);
+    remoteHost[CONFIG_LEN_REMOTE-1] = '\0';
+    char *ptrSeparator = strrchr(remoteHost, ':');
+    if (ptrSeparator == NULL) {
+        ESP_LOGE(TAG_WIFI, "Invalid address [%s]", remoteHost);
+        return -1;
+    }
+    remoteHost[ptrSeparator-remoteHost]='\0';
+    remotePort = atoi(ptrSeparator+1);
+
+    // Setup TCP socket address
+    struct sockaddr_in dest_addr;
+    dest_addr.sin_addr.s_addr = inet_addr(remoteHost);      // Convert IP string to address
+    dest_addr.sin_family = AF_INET;
+    dest_addr.sin_port = htons(remotePort);                 // Convert Port to network byte order
+    int addr_family = AF_INET;
+    int ip_protocol = IPPROTO_IP;
+
+    // Create a tcp socket
+    int sock = socket(addr_family, SOCK_STREAM, ip_protocol);
+    if (sock < 0) {
+        ESP_LOGE(TAG_WIFI, "Unable to create socket: errno %d", errno);
+        return sock;
+    }
+
+    // Connect to server
+    ESP_LOGI(TAG_WIFI, "Socket created, connecting to %s:%d", remoteHost, remotePort);
+    int err;
+    for (uint8_t i=0; i<TCP_RETRY_MAXIMUM; i++) {
+        err = connect(sock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+        if (err != 0) {
+            ESP_LOGE(TAG_WIFI, "Socket unable to connect: errno %d.  Attempt [%d]", errno, i+1);
+            close(sock);                                // Close the socket before retrying
+            vTaskDelay(2000 / portTICK_PERIOD_MS);      // Wait before retrying
+            if (i == TCP_RETRY_MAXIMUM-1) {
+                ESP_LOGE(TAG_WIFI, "Socket connections retries exceeded, aborting connection");
+                return -1;
+            }
+        } else {
+            i = TCP_RETRY_MAXIMUM;
+        }
+    }
+    ESP_LOGI(TAG_WIFI, "Successfully connected to [%s]", remoteAddress);
+    return sock;
+} /**/
+
+void tcpDataSend(int socket, char *data) {
+    int err = send(socket, data, strlen(data), 0);
+    if (err < 0) {
+        ESP_LOGE(TAG_WIFI, "Error while sending [%s], error: %d", data, errno);
+    } else {
+        ESP_LOGI(TAG_WIFI, ">%s<", data);
+    }
+} /**/
+
+void tcpDataReceive(int socket) {
+    return;
+} /**/
+
+// TODO: Remove
+//     // --- Send Data ---
+//     err = send(sock, PAYLOAD, strlen(PAYLOAD), 0);
+//     if (err < 0) {
+//         ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
+//     } else {
+//         ESP_LOGI(TAG, "Message sent: %s", PAYLOAD);
+//     }
+
+//     // --- Optional: Receive Response (if expected) ---
+//     /*
+//     int len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
+//     // Error occurred during receiving
+//     if (len < 0) {
+//         ESP_LOGE(TAG, "recv failed: errno %d", errno);
+//     }
+//     // Data received
+//     else {
+//         rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
+//         ESP_LOGI(TAG, "Received %d bytes: %s", len, rx_buffer);
+//     }
+//     */
+
+//     // --- Close Socket and Delay ---
+//     ESP_LOGI(TAG, "Shutting down socket...");
+//     shutdown(sock, 0);
+//     close(sock);
+
+//     // Wait before sending again (or you can remove this loop to send only once)
+//     vTaskDelay(5000 / portTICK_PERIOD_MS);
