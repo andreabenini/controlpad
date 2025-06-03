@@ -15,7 +15,7 @@
 /**
  * Init the configuration module (NVS setup)
  */
-esp_err_t configurationInit() {
+esp_err_t configurationInitialize() {
     esp_err_t result = nvs_flash_init();
     if (result == ESP_ERR_NVS_NO_FREE_PAGES || result == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_LOGW(TAG_CONFIGURATION, "NVS needs to be erased");
