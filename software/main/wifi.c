@@ -249,41 +249,23 @@ void tcpDataSend(int socket, char *data) {
     if (err < 0) {
         ESP_LOGE(TAG_WIFI, "Error while sending [%s], error: %d", data, errno);
     } else {
-        ESP_LOGI(TAG_WIFI, ">%s<", data);
+        ESP_LOGI(TAG_WIFI, ">%s.", data);
     }
 } /**/
 
-void tcpDataReceive(int socket) {
+void tcpDataReceive(int socket, char* buffer) {
+    int len = recv(socket, buffer, sizeof(buffer)-1, 0);
+    if (len<0) {
+        ESP_LOGE(TAG_WIFI, "tcpDataReceive() error: %d", errno);
+    } else {
+        buffer[len] = '\0';
+        ESP_LOGI(TAG_WIFI, "<%s. [len:%d]", buffer, len);
+    }
     return;
 } /**/
 
-// TODO: Remove
-//     // --- Send Data ---
-//     err = send(sock, PAYLOAD, strlen(PAYLOAD), 0);
-//     if (err < 0) {
-//         ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
-//     } else {
-//         ESP_LOGI(TAG, "Message sent: %s", PAYLOAD);
-//     }
 
-//     // --- Optional: Receive Response (if expected) ---
-//     /*
-//     int len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
-//     // Error occurred during receiving
-//     if (len < 0) {
-//         ESP_LOGE(TAG, "recv failed: errno %d", errno);
-//     }
-//     // Data received
-//     else {
-//         rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
-//         ESP_LOGI(TAG, "Received %d bytes: %s", len, rx_buffer);
-//     }
-//     */
-
-//     // --- Close Socket and Delay ---
-//     ESP_LOGI(TAG, "Shutting down socket...");
-//     shutdown(sock, 0);
-//     close(sock);
-
-//     // Wait before sending again (or you can remove this loop to send only once)
-//     vTaskDelay(5000 / portTICK_PERIOD_MS);
+void tcpSocketClose(int socket) {
+    shutdown(socket, 0);
+    close(socket);
+}

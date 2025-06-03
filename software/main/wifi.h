@@ -43,6 +43,9 @@ esp_err_t wifiConnect(const char* ssid, const char* password, char *ip);
 esp_err_t wifiDisconnect();
 
 int  tcpSocket(char* remoteAddress);
+void tcpSocketClose(int socket);
+
 void tcpDataSend(int socket, char *data);
+void tcpDataReceive(int socket, char* buffer);
 
 #endif
