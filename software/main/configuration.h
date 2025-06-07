@@ -5,6 +5,8 @@
 #include <stdint.h>
 
 
+#include "mainloop.h"
+
 
 // Library defines and structs
 #define TAG_CONFIGURATION           "config"
@@ -14,6 +16,7 @@
 #define CONFIG_LEN_PASSWORD         40
 #define CONFIG_LEN_LOCAL            20
 #define CONFIG_LEN_REMOTE           40
+#define CONFIG_LEN_MAPSTRING        30
 
 #define STORAGE_NAMESPACE           "config"
 #define NVS_ARRAY                   "configurations"
@@ -27,12 +30,13 @@
 
 
 typedef struct {
-    char name[CONFIG_LEN_NAME];             // Profile name
-    uint8_t type;                           // Profile type (TYPE_*): TCP/UDP/HTTP/BT/BTLE
-    char username[CONFIG_LEN_USERNAME];     // Username for the network (ssid for TCP/IP)
-    char password[CONFIG_LEN_PASSWORD];     // Password for the network (secret for TCP/IP)
-    char local[CONFIG_LEN_LOCAL];           // Local address. on TCP: NULL for DHCP
-    char remote[CONFIG_LEN_REMOTE];         // Remote HOST/URL/..
+    char name[CONFIG_LEN_NAME];                         // Profile name
+    uint8_t type;                                       // Profile type (TYPE_*): TCP/UDP/HTTP/BT/BTLE
+    char username[CONFIG_LEN_USERNAME];                 // Username for the network (ssid for TCP/IP)
+    char password[CONFIG_LEN_PASSWORD];                 // Password for the network (secret for TCP/IP)
+    char local[CONFIG_LEN_LOCAL];                       // Local address. on TCP: NULL for DHCP
+    char remote[CONFIG_LEN_REMOTE];                     // Remote HOST/URL/..
+    char map[BUTTON_I2C_NUM][CONFIG_LEN_MAPSTRING];     // Buttons maps
 } profiles;
 
 
