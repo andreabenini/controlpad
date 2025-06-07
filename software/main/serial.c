@@ -152,6 +152,15 @@ void loadConfiguration(char *config) {
                     break;
             }
             ESP_LOGI(TAG_SERIAL, "    - Remote    %s", configurations[itemCurrent].remote);
+            // Buttons map
+            cJSON *map = cJSON_GetObjectItem(itemIterator, "map");
+            if (!cJSON_IsObject(map)) {
+                ESP_LOGW(TAG_SERIAL, "No keyboard mapping found, no mapping preset loaded");
+            } else {
+                _loadMapping(map, configurations, itemCurrent);
+            }
+
+            ESP_LOGI(TAG_SERIAL, "    - ButtonMap %s", configurations[itemCurrent].remote);
         }
         itemCurrent++;
     }
@@ -172,4 +181,54 @@ void loadConfiguration(char *config) {
     }
     free(configurations);
     cJSON_Delete(root);
+} /**/
+
+void _loadMapping(cJSON* buttonList, profiles* configurations, size_t current) {
+    ESP_LOGI(TAG_SERIAL, "Loading button mapping");
+    cJSON* element = NULL;
+    char*  value;
+    uint8_t index;
+    cJSON_ArrayForEach(element, buttonList) {
+        if (cJSON_IsString(element) && (element->string != NULL)) {
+            if        (!strcmp(element->string, "a")) {
+                index = 0;
+            } else if (!strcmp(element->string, "b")) {
+                index = 1;
+            } else if (!strcmp(element->string, "x")) {
+                index = 2;
+            } else if (!strcmp(element->string, "y")) {
+                index = 3;
+            } else if (!strcmp(element->string, "menu")) {
+                index = 4;
+            } else if (!strcmp(element->string, "option")) {
+                index = 5;
+            } else if (!strcmp(element->string, "right_top")) {
+                index = 6;
+            } else if (!strcmp(element->string, "right_bottom")) {
+                index = 7;
+            } else if (!strcmp(element->string, "dpad_left")) {
+                index = 8;
+            } else if (!strcmp(element->string, "dpad_right")) {
+                index = 9;
+            } else if (!strcmp(element->string, "dpad_up")) {
+                index = 10;
+            } else if (!strcmp(element->string, "dpad_down")) {
+                index = 11;
+            } else if (!strcmp(element->string, "select")) {
+                index = 12;
+            } else if (!strcmp(element->string, "left_top")) {
+                index = 13;
+            } else if (!strcmp(element->string, "left_bottom")) {
+                index = 14;
+            } else {
+                index = UINT8_MAX;
+            }
+            if (index != UINT8_MAX) {
+                ESP_LOGW(TAG_SERIAL, "%s = %s", element->string, cJSON_GetStringValue(element));       // DEBUG:
+                value = cJSON_GetStringValue(element);
+                strncpy(configurations[current].map[index], value, CONFIG_LEN_MAPSTRING);
+                configurations[current].map[index][CONFIG_LEN_MAPSTRING-1] = '\0';
+            }
+        }
+    }
 } /**/
