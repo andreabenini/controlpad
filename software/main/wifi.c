@@ -249,7 +249,7 @@ void tcpDataSend(int socket, char *data) {
     if (err < 0) {
         ESP_LOGE(TAG_WIFI, "Error while sending [%s], error: %d", data, errno);
     } else {
-        ESP_LOGI(TAG_WIFI, ">%s.", data);
+        ESP_LOGI(TAG_WIFI, "> [%s]", data);
     }
 } /**/
 
