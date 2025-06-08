@@ -23,5 +23,7 @@
 void taskSerial(void *pvParameters);
 void loadConfiguration(char *config);
 void _loadMapping(cJSON* buttonList, profiles* configurations, size_t current);
+void _mapString(profiles* configurations, size_t currentConfig, size_t item, char* evalString);
+
 
 #endif

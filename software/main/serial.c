@@ -186,7 +186,6 @@ void loadConfiguration(char *config) {
 void _loadMapping(cJSON* buttonList, profiles* configurations, size_t current) {
     ESP_LOGI(TAG_SERIAL, "Loading button mapping");
     cJSON* element = NULL;
-    char*  value;
     uint8_t index;
     cJSON_ArrayForEach(element, buttonList) {
         if (cJSON_IsString(element) && (element->string != NULL)) {
@@ -224,11 +223,15 @@ void _loadMapping(cJSON* buttonList, profiles* configurations, size_t current) {
                 index = UINT8_MAX;
             }
             if (index != UINT8_MAX) {
-                ESP_LOGW(TAG_SERIAL, "%s = %s", element->string, cJSON_GetStringValue(element));       // DEBUG:
-                value = cJSON_GetStringValue(element);
-                strncpy(configurations[current].map[index], value, CONFIG_LEN_MAPSTRING);
-                configurations[current].map[index][CONFIG_LEN_MAPSTRING-1] = '\0';
+                _mapString(configurations, current, index, cJSON_GetStringValue(element));
             }
         }
     }
 } /**/
+
+
+void _mapString(profiles* configurations, size_t currentConfig, size_t item, char* evalString) {
+    ESP_LOGW(TAG_SERIAL, "%d = %s", item, evalString);       // DEBUG:
+    strncpy(configurations[currentConfig].map[item], evalString, CONFIG_LEN_MAPSTRING);
+    configurations[currentConfig].map[item][CONFIG_LEN_MAPSTRING-1] = '\0';
+}
