@@ -20,6 +20,8 @@ netcat test:
   # - Playstation mapping layout
   # - Each single profile has its own dedicated mapping
   # - System button (start in PS layout) cannot be remapped
+  # - HEX mapping allowed, to transfer CR+LF use C-Style syntax: "\x0d\x0a".
+  #       Short macros like: "\t", "\r", "\n" are allowed too
   # See samples here to understand how it works
   map:
     a:    # When empty is totally ignored, the key will not be transmitted
@@ -28,7 +30,7 @@ netcat test:
     y: yY\x0d\x0a
     menu: \x1bOP        # F1
     option: \x1bOQ      # F2
-    right_top:
+    right_top: Hello\tWorld\x0d\x0a
     right_bottom:
     dpad_left:
     dpad_right:
