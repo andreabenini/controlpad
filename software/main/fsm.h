@@ -9,8 +9,7 @@
 
 
 #define TAG_FSM                 "fsm"
-
-#define MENU_CONFIGURATION  "< CONFIGURATION >"
+#define MENU_CONFIGURATION      "< CONFIGURATION >"
 
 
 typedef enum {
@@ -35,17 +34,7 @@ typedef struct {
 esp_err_t statusInit();
 void      statusChange(statusType mode);
 
-/**
- * FSM object properties
- */
-// Configuration Menu (System Setup)
-void statusSystemInit();
-void statusSystemShow();
-void statusSystemEvent();
-void statusSystemKeypress(uint8_t button, bool status);
-
-
-void eventButton(uint8_t button, bool status);
-void eventStatus();
+void      eventButton(uint8_t button, bool status);
+void      eventStatus();
 
 #endif
