@@ -37,4 +37,6 @@ void      statusChange(statusType mode);
 void      eventButton(uint8_t button, bool status);
 void      eventStatus();
 
+void      rebootDetect();
+void      rebootGraceful(uint8_t newState, uint8_t profile);
 #endif
