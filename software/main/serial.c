@@ -229,9 +229,47 @@ void _loadMapping(cJSON* buttonList, profiles* configurations, size_t current) {
     }
 } /**/
 
-
 void _mapString(profiles* configurations, size_t currentConfig, size_t item, char* evalString) {
-    ESP_LOGW(TAG_SERIAL, "%d = %s", item, evalString);       // DEBUG:
+    char*   p = evalString;
+    char    hexString[3];
+    uint8_t byteValue;
+    for (uint8_t strSize=strlen(evalString); strSize>0; strSize--) {
+        if (*p=='\\' && strSize>0) {
+            switch (*(p+1)) {
+                case 'x':           // "\x0D"
+                    if (strSize>2 && isxdigit((unsigned char)*(p+2)) && isxdigit((unsigned char)*(p+3))) {
+                        strncpy(hexString, p+2, 2);
+                        hexString[2] = '\0';
+                        byteValue = (uint8_t)strtol(hexString, NULL, 16);
+                        *p = byteValue;
+                        strSize -= 3;
+                        memmove(p+1, p+4, strSize+1);
+                    }
+                    break;
+                case '\\':          // just a "\"
+                    *p = '\\';
+                    strSize--;
+                    memmove(p+1, p+2, strSize+1);
+                    break;
+                case 't':           // "\t" [tab]
+                    *p = 0x09;
+                    strSize--;
+                    memmove(p+1, p+2, strSize+1);
+                    break;
+                case 'n':           // "\n" [0x0A, newline]
+                    *p = 0x0A;
+                    strSize--;
+                    memmove(p+1, p+2, strSize+1);
+                    break;
+                case 'r':           // "\r" [0x0D, carriage return]
+                    *p = 0x0D;
+                    strSize--;
+                    memmove(p+1, p+2, strSize+1);
+                    break;
+            }
+        }
+        p++;
+    }
     strncpy(configurations[currentConfig].map[item], evalString, CONFIG_LEN_MAPSTRING);
     configurations[currentConfig].map[item][CONFIG_LEN_MAPSTRING-1] = '\0';
-}
+} /**/
