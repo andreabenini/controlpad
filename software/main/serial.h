@@ -1,6 +1,7 @@
 #ifndef SERIAL__H
 #define SERIAL__H
 
+#include <ctype.h>
 #include <stdint.h>
 #include <string.h>                                             // IWYU pragma: keep
 #include <stdbool.h>
