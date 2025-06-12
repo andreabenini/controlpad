@@ -101,7 +101,6 @@ typedef struct {
 void taskMainLoop(void *pvParameter);
 void buttonRead(uint8_t gpioA_data, uint8_t gpioB_data);
 
-
 #define TAG_MAINLOOP    "loop"
 
 #endif
