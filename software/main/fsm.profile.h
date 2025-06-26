@@ -28,7 +28,6 @@ typedef struct {
     esp_err_t    (*disconnect)(void* self);                     // Disconnection from the remote network
     esp_err_t    (*keySend)(void* self, uint8_t button);        // Connection to the remote network
 
-    uint8_t      profileNumber;                                 // Selected profile number from the list
     profiles     configuration;                                 // Current configuration loaded
     int          socket;                                        // TCP socket (when TCP/HTTP is used)
 } objectProfile;
