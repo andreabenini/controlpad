@@ -8,7 +8,7 @@
 
 
 keyboardStatus keyboard = {0};
-extern QueueHandle_t queueMessage;
+extern QueueHandle_t  queueMessage;
 
 
 /**
@@ -117,6 +117,7 @@ void taskMainLoop(void *pvParameter) {
     BaseType_t receivedQueue;
     while (1) {
         // Read input from I2C, Register A
+        // ESP_LOGI(TAG_MAINLOOP, "1");      // DEBUG:
         err = mcp23017_RegisterRead(handleDevice, MCP23017_GPIOA, &gpioA_data);
         if (err != ESP_OK) {
             ESP_LOGE(TAG_MAINLOOP, "Failed to read GPIO buttons, Register A");
@@ -127,6 +128,7 @@ void taskMainLoop(void *pvParameter) {
             return;
         }
         // Read input from I2C, Register B
+        // ESP_LOGI(TAG_MAINLOOP, "2");      // DEBUG:
         err = mcp23017_RegisterRead(handleDevice, MCP23017_GPIOB, &gpioB_data);
         if (err != ESP_OK) {
             ESP_LOGE(TAG_MAINLOOP, "Failed to read GPIO buttons, Register B");
@@ -137,8 +139,10 @@ void taskMainLoop(void *pvParameter) {
             return;
         }
         // Read analog values from all joystick axes
+        // ESP_LOGI(TAG_MAINLOOP, "3");      // DEBUG:
         err = adc_continuous_read(adcHandle, adcData, ADC_BUFFER_SIZE, &adcResultNum, 0);
         if (err == ESP_OK) {
+            // ESP_LOGI(TAG_MAINLOOP, "4");  // DEBUG:
             for (int i=0; i<adcResultNum; i+=SOC_ADC_DIGI_RESULT_BYTES) {
                 p = (adc_digi_output_data_t*)&adcData[i];
                 // Check the channel number validation, the data is invalid if the channel num exceed the maximum channel
@@ -157,36 +161,46 @@ void taskMainLoop(void *pvParameter) {
                         break;
                 }
             }
+            // ESP_LOGI(TAG_MAINLOOP, "5");  // DEBUG:
         } else if (err == ESP_ERR_TIMEOUT) {
             // Try to read `ADC_BUFFER_SIZE` until API returns timeout, which means there's no available data. Usually "break;"
             ESP_LOGW(TAG_MAINLOOP, "ADC Continuous read timeout");
         }
 
         // Read button functions and trigger events
-        // ESP_LOGI(TAG_MAINLOOP, " .");    // DEBUG:
+        // ESP_LOGI(TAG_MAINLOOP, " .");  // DEBUG:
         buttonRead(gpioA_data, gpioB_data);             // Read buttons and raise events, if any
         eventStatus();                                  // Raise event to report overall system state
+        // ESP_LOGI(TAG_MAINLOOP, "6");      // DEBUG:
         /**
          * Because printing is slow every time `ulTaskNotifyTake` is called it will immediately return.
          * To avoid a task watchdog timeout, adding a delay here. When you replace the way you process the data,
          * usually you don't need this delay (as this task will block for a while).
          */
         // FIXME: Comment it back again once done or debugging has been restored
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);        // Adding it to avoid task's watchdog timeout (see note above)
-        // Non-blocking check for item in the queue from Task2
+        // ulTaskNotifyTake(pdTRUE, portMAX_DELAY);        // Adding it to avoid task's watchdog timeout (see note above)
+        // Non-blocking check for item in the queue from Task2 (loading new configuration from serial port)
         receivedQueue = xQueueReceive(
-                    queueMessage,                       // The queue to receive from
-                    &receivedSignal,                    // Pointer to where received data will be stored
-                    0                                   // Don't wait (non-blocking)
-                );
+            queueMessage,                               // The queue to receive from
+            &receivedSignal,                            // Pointer to where received data will be stored
+            0                                           // Don't wait (non-blocking)
+        );
+        // ESP_LOGI(TAG_MAINLOOP, "7");      // DEBUG:
         if (receivedQueue == pdTRUE) {
             statusChange(STATUS_CONFIGURATION);
         }
+        ESP_LOGI(TAG_MAINLOOP, "8");      // DEBUG:
+        // FIXME: Here comes the mess, I cannot reach next '+.+' debug point
+        // ulTaskNotifyTake(pdTRUE, portMAX_DELAY);        // Adding it to avoid task's watchdog timeout (see note above)
+        if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(1000)) == 0) {
+            ESP_LOGW(TAG_MAINLOOP, "notification timeout");
+        }
+        ESP_LOGI(TAG_MAINLOOP, "9");      // DEBUG:
         vTaskDelay(pdMS_TO_TICKS(TIME_POLL_DELAY));     // POLL_DELAY between reads (as .h define)
-        // ESP_LOGI(TAG_MAINLOOP, "+.+");    // DEBUG:
+        ESP_LOGI(TAG_MAINLOOP, "+.+");    // DEBUG:
     }
     // Clean up
-    // TODO: Add these twos in every exit condition or rearrange exit cleanly
+    // TODO: Add these two in every exit condition or rearrange exit cleanly
     ESP_ERROR_CHECK(adc_continuous_stop(adcHandle));
     ESP_ERROR_CHECK(adc_continuous_deinit(adcHandle));
 
