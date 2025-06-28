@@ -87,9 +87,7 @@ void menuEventStatus(void* object) {
         if (self->selected == self->connectionsNumber-1) {
             statusChange(STATUS_SYSTEM);
         } else {
-            objectProfile* profile = (objectProfile*)(((void**)self->parent)[STATUS_PROFILE]);
-            profile->profileNumber = self->selected;
-            statusChange(STATUS_PROFILE);
+            rebootGraceful(STATUS_PROFILE, self->selected);
         }
     } else if (MENU_CANCEL == 1) {
         self->lockEvent = true;
