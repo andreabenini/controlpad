@@ -4,6 +4,7 @@
 
 
 extern keyboardStatus keyboard;
+extern uint8_t profileNumber;               // Optional variable, current user profile to load for fsm.profile.c
 
 
 /**
@@ -16,7 +17,6 @@ void* profileCreate(void* objects) {
         self->base.init        = profileInit;
         self->base.eventStatus = profileEventStatus;
         self->base.eventButton = profileEventButton;
-        self->profileNumber    = UINT8_MAX;
         self->displayTitle     = (void*)profileDisplayTitle;
         self->displayStatusBar = (void*)profileDisplayStatusBar;
         self->displayError     = (void*)profileDisplayError;
@@ -31,10 +31,9 @@ void* profileCreate(void* objects) {
 void profileInit(void* object) {
     objectProfile* self = object;
     // Loading profile
-    ESP_LOGI(TAG_PROFILE, "Loading profile [%d]", self->profileNumber);
-    if (self->profileNumber == UINT8_MAX || configurationLoad(&(self->configuration), self->profileNumber) != ESP_OK) {
-        ESP_LOGE(TAG_PROFILE, "Cannot load user profile N:%d", self->profileNumber);
-        statusChange(STATUS_MENU);
+    if (profileNumber == UINT8_MAX || configurationLoad(&(self->configuration), profileNumber) != ESP_OK) {
+        ESP_LOGE(TAG_PROFILE, "Cannot load user profile N:%d", profileNumber);
+        rebootGraceful(STATUS_MENU, UINT8_MAX);
         return;
     }
     ESP_LOGI(TAG_PROFILE, "    - '%s', connection type:%d", self->configuration.name, self->configuration.type);
@@ -44,7 +43,7 @@ void profileInit(void* object) {
     self->displayStatusBar(self);
     // Peer connection and display information
     if (self->connect(self) != ESP_OK) {
-        statusChange(STATUS_MENU);
+        rebootGraceful(STATUS_MENU, UINT8_MAX);
         return;
     }
 }
@@ -163,7 +162,7 @@ void profileEventButton(void* object, uint8_t button, bool status) {
         if (button==B_START) {
             ESP_LOGI(TAG_PROFILE, "Closing user profile status, returning to main menu");
             self->disconnect(self);
-            statusChange(STATUS_MENU);
+            rebootGraceful(STATUS_MENU, UINT8_MAX);
         } else {
             self->keySend(self, button);
         }
@@ -174,7 +173,7 @@ void profileEventButton(void* object, uint8_t button, bool status) {
  * Send a key to remote
  */
 esp_err_t profileKeySend(objectProfile *self, uint8_t button) {
-    ESP_LOGW(TAG_PROFILE, "keySend() Button: %d", button);
-    tcpDataSend(self->socket, "Hello\n");
+    ESP_LOGW(TAG_PROFILE, "keySend() Button: %d", button);      // DEBUG:
+    tcpDataSend(self->socket, self->configuration.map[button]);
     return ESP_OK;
 } /**/
